@@ -1,0 +1,90 @@
+.wallet-options {
+    width: 100%;
+  }
+  
+  .wallet-options h2 {
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+  }
+  
+  .wallet-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .wallet-button {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    color: #2c3e50;
+  }
+  
+  .wallet-button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+  }
+  
+  .wallet-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .error {
+    color: #e74c3c;
+    margin-top: 1rem;
+  }
+  
+  /* Navbar dropdown styles */
+  .navbar-dropdown {
+    position: absolute;
+    top: 70px;
+    right: 1rem;
+    width: 300px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    z-index: 1000;
+  }
+  
+  .dropdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e1e4e8;
+  }
+  
+  .dropdown-header h3 {
+    margin: 0;
+    color: #2c3e50;
+  }
+  
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+  }
+  
+  .connect-wallet-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+  }
+  
+  .connect-wallet-button:hover {
+    background-color: #2980b9;
+  } 

@@ -1,0 +1,233 @@
+.token-balances {
+    width: 100%;
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .dashboard-header h2 {
+    margin: 0;
+    color: #2c3e50;
+  }
+  
+  .total-value-card {
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    text-align: center;
+  }
+  
+  .total-value-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+  }
+  
+  .total-value-amount {
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+  
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .chart-card, .summary-card, .tokens-table-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    border: 1px solid #e1e4e8;
+  }
+  
+  .chart-card h3, .summary-card h3, .tokens-table-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    font-size: 1.2rem;
+  }
+  
+  .pie-chart-container {
+    height: 300px;
+  }
+  
+  .chain-distribution {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .chain-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  
+  .chain-name {
+    font-weight: 500;
+    color: #2c3e50;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .chain-value {
+    color: #2c3e50;
+    font-weight: 600;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  
+  .chain-percentage {
+    color: #7f8c8d;
+    grid-column: 3;
+    grid-row: 1;
+    text-align: right;
+  }
+  
+  .progress-bar {
+    height: 8px;
+    background-color: #ecf0f1;
+    border-radius: 4px;
+    overflow: hidden;
+    grid-column: 1 / span 3;
+    grid-row: 2;
+  }
+  
+  .progress {
+    height: 100%;
+    border-radius: 4px;
+  }
+  
+  .tokens-table-card {
+    margin-top: 1.5rem;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .tokens-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .tokens-table th, .tokens-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e1e4e8;
+  }
+  
+  .tokens-table th {
+    font-weight: 600;
+    color: #2c3e50;
+    background-color: #f8f9fa;
+  }
+  
+  .tokens-table tr:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .token-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .token-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .loading-container, .error-container, .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: #7f8c8d;
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .dashboard-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
+  
+  .refresh-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+  }
+  
+  .refresh-button:hover:not(:disabled) {
+    background-color: #2980b9;
+  }
+  
+  .refresh-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+  }
+  
+  .last-refresh {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-bottom: 0.5rem;
+  }
+  
+  @media (max-width: 768px) {
+    .dashboard-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .dashboard-actions {
+      align-items: stretch;
+    }
+    
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .tokens-table th, .tokens-table td {
+      padding: 0.75rem 0.5rem;
+    }
+  } 

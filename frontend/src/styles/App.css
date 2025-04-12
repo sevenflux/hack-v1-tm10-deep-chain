@@ -1,0 +1,94 @@
+.app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+    overflow-x: hidden; /* 防止水平滚动 */
+  }
+  
+  .main-container {
+    display: flex;
+    flex: 1;
+    padding-top: 70px; /* 为导航栏留出空间 */
+    max-width: 100vw; /* 限制最大宽度 */
+    position: relative; /* 为侧边栏定位提供参考 */
+  }
+  
+  .content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    min-width: 0; /* 防止内容溢出 */
+    transition: padding-right 0.3s ease; /* 改为 padding-right 的过渡 */
+    width: 100%; /* 确保内容区域占满可用空间 */
+  }
+  
+  /* 添加侧边栏打开时的内容区域样式 */
+  .sidebar-open .content {
+    padding-right: 340px; /* 320px 侧边栏宽度 + 20px 额外空间 */
+  }
+  
+  .connect-section {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  .connect-section h2 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+  }
+  
+  .connect-section p {
+    margin-bottom: 2rem;
+    color: #7f8c8d;
+  }
+  
+  .dashboard-section {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+  }
+  
+  .footer {
+    padding: 1rem;
+    text-align: center;
+    background-color: #2c3e50;
+    color: white;
+    font-size: 0.9rem;
+    width: 100%;
+  }
+  
+  /* 添加媒体查询以适应不同屏幕尺寸 */
+  @media (max-width: 1200px) {
+    .main-container {
+      flex-direction: column;
+    }
+    
+    .sidebar {
+      width: 100% !important;
+      height: 300px !important;
+      border-top: 1px solid #e1e4e8;
+      border-left: none !important;
+    }
+    
+    /* 在小屏幕上，侧边栏打开时不需要调整内容区域的 padding */
+    .sidebar-open .content {
+      padding-right: 2rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .content {
+      padding: 1rem;
+    }
+    
+    .dashboard-section {
+      padding: 1rem;
+    }
+  } 

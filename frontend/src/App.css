@@ -1,0 +1,267 @@
+#root {
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 2rem;
+	text-align: center;
+  }
+  
+  .logo {
+	height: 6em;
+	padding: 1.5em;
+	will-change: filter;
+	transition: filter 300ms;
+  }
+  .logo:hover {
+	filter: drop-shadow(0 0 2em #646cffaa);
+  }
+  .logo.react:hover {
+	filter: drop-shadow(0 0 2em #61dafbaa);
+  }
+  
+  @keyframes logo-spin {
+	from {
+	  transform: rotate(0deg);
+	}
+	to {
+	  transform: rotate(360deg);
+	}
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+	a:nth-of-type(2) .logo {
+	  animation: logo-spin infinite 20s linear;
+	}
+  }
+  
+  .card {
+	padding: 2em;
+  }
+  
+  .read-the-docs {
+	color: #888;
+  }
+  
+  .container {
+	max-width: 800px;
+	margin: 0 auto;
+	padding: 2rem;
+	text-align: center;
+	background-color: #fff;
+	border-radius: 8px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .chain-selector,
+  .token-selector {
+	margin: 1rem 0;
+  }
+  
+  .select-input {
+	width: 100%;
+	max-width: 500px;
+	padding: 0.8rem;
+	font-size: 1rem;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	margin: 0.5rem 0;
+	background-color: #fff;
+  }
+  
+  .search-container {
+	margin: 2rem 0;
+  }
+  
+  .address-input {
+	width: 100%;
+	max-width: 500px;
+	padding: 0.8rem;
+	font-size: 1rem;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	margin-bottom: 1rem;
+  }
+  
+  .result-container {
+	margin-top: 2rem;
+	min-height: 60px;
+  }
+  
+  .balance {
+	font-size: 1.5rem;
+	font-weight: bold;
+	color: #2c3e50;
+  }
+  
+  .error {
+	color: #e74c3c;
+  }
+  
+  .explorer-link {
+	margin-top: 2rem;
+  }
+  
+  .explorer-link a {
+	color: #3498db;
+	text-decoration: none;
+  }
+  
+  .explorer-link a:hover {
+	text-decoration: underline;
+  }
+  
+  .app-container {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+  }
+  
+  header {
+	margin-bottom: 2rem;
+  }
+  
+  main {
+	flex: 1;
+	margin-bottom: 2rem;
+  }
+  
+  footer {
+	margin-top: auto;
+	padding: 1rem 0;
+	color: #888;
+	font-size: 0.8rem;
+  }
+  
+  .connect-section {
+	max-width: 500px;
+	margin: 0 auto;
+	padding: 2rem;
+	background-color: #fff;
+	border-radius: 8px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .wallet-options h2 {
+	margin-bottom: 1.5rem;
+  }
+  
+  .wallet-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+  }
+  
+  .wallet-button {
+	padding: 1rem;
+	font-size: 1rem;
+	background-color: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s;
+  }
+  
+  .wallet-button:hover {
+	background-color: #e9ecef;
+  }
+  
+  .wallet-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+  }
+  
+  .dashboard {
+	display: grid;
+	grid-template-columns: 1fr 3fr;
+	gap: 2rem;
+  }
+  
+  .account-section {
+	background-color: #fff;
+	border-radius: 8px;
+	padding: 1.5rem;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .account-info {
+	text-align: left;
+  }
+  
+  .account-info h2 {
+	margin-bottom: 1rem;
+	text-align: center;
+  }
+  
+  .address, .chain {
+	margin-bottom: 0.5rem;
+	word-break: break-all;
+  }
+  
+  .disconnect-button {
+	margin-top: 1rem;
+	padding: 0.5rem 1rem;
+	background-color: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+	border-radius: 4px;
+	cursor: pointer;
+  }
+  
+  .disconnect-button:hover {
+	background-color: #f5c6cb;
+  }
+  
+  .balances-section {
+	background-color: #fff;
+	border-radius: 8px;
+	padding: 1.5rem;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .token-balances h2 {
+	margin-bottom: 1.5rem;
+  }
+  
+  .total-value {
+	margin-bottom: 1.5rem;
+	font-size: 1.2rem;
+  }
+  
+  .pie-chart-container {
+	margin: 2rem 0;
+	height: 400px;
+  }
+  
+  .balance-table {
+	margin-top: 2rem;
+  }
+  
+  .balance-table h3 {
+	margin-bottom: 1rem;
+  }
+  
+  .balance-table table {
+	width: 100%;
+	border-collapse: collapse;
+  }
+  
+  .balance-table th, .balance-table td {
+	padding: 0.75rem;
+	text-align: left;
+	border-bottom: 1px solid #dee2e6;
+  }
+  
+  .balance-table th {
+	background-color: #f8f9fa;
+	font-weight: bold;
+  }
+  
+  .balance-table tr:hover {
+	background-color: #f8f9fa;
+  }
+  
+  @media (max-width: 768px) {
+	.dashboard {
+	  grid-template-columns: 1fr;
+	}
+  }
+  
