@@ -4,7 +4,8 @@ import {
   VerifyResponse,
   IPFSStorageData,
   APIError,
-  generateRequestHash
+  generateRequestHash,
+  BlockchainRequest
 } from './types';
 
 // API 基础URL - 根据环境配置
@@ -118,6 +119,31 @@ export class ApiClient {
         success: false,
         error: error instanceof APIError ? error.message : '验证交易时发生错误'
       };
+    }
+  }
+
+  /**
+   * 获取用户的历史投资建议记录
+   * @param userAddress 用户钱包地址
+   * @returns 历史记录列表
+   */
+  async getUserRequests(userAddress: string): Promise<BlockchainRequest[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/history/${userAddress}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new APIError(
+          errorData.detail || '获取历史记录失败',
+          response.status
+        );
+      }
+      
+      const result = await response.json();
+      return result.data || [];
+    } catch (error) {
+      console.error('获取用户历史记录失败:', error);
+      return [];
     }
   }
 } 

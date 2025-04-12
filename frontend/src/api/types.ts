@@ -106,9 +106,42 @@ export class APIError extends Error {
 
 // 工具函数：生成请求哈希
 export function generateRequestHash(input: AdvisorRequestInput): string {
-  // 对输入进行排序以确保哈希一致性
-  const sortedInput = JSON.stringify(input, Object.keys(input).sort());
-  return ethers.keccak256(ethers.toUtf8Bytes(sortedInput));
+  try {
+    // 对数组内的对象进行排序以确保一致性
+    const sortedAssets = [...input.cryptoAssets].sort((a, b) => 
+      a.symbol.localeCompare(b.symbol) || a.percentage - b.percentage
+    );
+    
+    // 创建副本并使用排序后的资产
+    const sortedInput = {
+      ...input,
+      cryptoAssets: sortedAssets
+    };
+    
+    // 序列化为JSON，使用特定格式 (与后端相匹配)
+    const jsonStr = JSON.stringify(sortedInput, (key, value) => {
+      // 使值格式化方式与后端一致
+      if (typeof value === 'number') {
+        // 确保数字格式一致
+        return Number(value);
+      }
+      return value;
+    });
+    
+    // 去除所有空格和换行符，确保格式一致性
+    const compactJson = jsonStr.replace(/\s/g, '');
+    console.log("前端计算哈希的输入:", compactJson);
+    
+    // 使用keccak256哈希
+    const hash = ethers.keccak256(ethers.toUtf8Bytes(compactJson));
+    console.log("前端计算的哈希:", hash);
+    
+    return hash;
+  } catch (error) {
+    console.error('计算请求哈希时出错:', error);
+    // 发生错误时返回一个空哈希
+    return "0x0000000000000000000000000000000000000000000000000000000000000000";
+  }
 }
 
 // 工具函数：验证签名

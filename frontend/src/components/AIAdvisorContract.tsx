@@ -4,11 +4,11 @@ import { Address } from 'viem'
 import { 
   AI_CONTRACT_ADDRESS, 
   AI_CONTRACT_ABI, 
-  BlockchainRequest, 
   aiApi, 
   AdvisorResponse,
   getEtherscanLink
 } from '../api'
+import { BlockchainRequest } from '../api/types'
 import '../styles/AIAdvisorContract.css'
 
 // 从环境变量获取合约地址
@@ -18,15 +18,7 @@ export function AIAdvisorContract() {
   const { address, isConnected } = useAccount()
   const [isLoading, setIsLoading] = useState(false)
   const { writeContractAsync } = useWriteContract()
-  const [history, setHistory] = useState<{
-    requestHash: string;
-    cid: string;
-    timestamp: number;
-    details?: {
-      recommendation?: string;
-      allocation?: { asset: string; percentage: number }[];
-    }
-  }[]>([])
+  const [history, setHistory] = useState<BlockchainRequest[]>([])
   
   // 查询用户历史请求
   const { data: userRequests, isError, refetch } = useReadContract({
@@ -53,8 +45,37 @@ export function AIAdvisorContract() {
       
       // 获取IPFS详情数据
       loadIpfsDetails(formattedRequests)
+    } else if (address && isConnected) {
+      // 如果直接从合约获取数据失败，则尝试使用API获取
+      fetchHistoryFromApi();
     }
-  }, [userRequests])
+  }, [userRequests, address, isConnected])
+  
+  // 使用API获取历史记录
+  const fetchHistoryFromApi = async () => {
+    if (!address) return;
+    
+    try {
+      setIsLoading(true);
+      console.log("尝试从API获取历史记录...");
+      
+      const historyData = await aiApi.getUserRequests(address);
+      
+      if (historyData && historyData.length > 0) {
+        console.log("成功从API获取历史记录:", historyData);
+        setHistory(historyData);
+        
+        // 获取IPFS详情数据
+        loadIpfsDetails(historyData);
+      } else {
+        console.log("API返回的历史记录为空");
+      }
+    } catch (error) {
+      console.error("从API获取历史记录失败:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
   
   // 加载IPFS详情
   const loadIpfsDetails = async (requests: BlockchainRequest[]) => {
@@ -91,8 +112,11 @@ export function AIAdvisorContract() {
     setIsLoading(false)
   }
   
+  // 刷新历史记录
   const refreshHistory = () => {
-    refetch()
+    refetch();
+    // 同时也尝试通过API获取
+    fetchHistoryFromApi();
   }
   
   const formatDate = (timestamp: number) => {
