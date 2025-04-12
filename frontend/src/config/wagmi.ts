@@ -1,5 +1,5 @@
 import { http, createConfig } from 'wagmi'
-import { mainnet, bsc, polygon, arbitrum } from 'wagmi/chains'
+import { mainnet, bsc, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 import { SUPPORTED_CHAINS } from './tokens'
 
@@ -31,6 +31,7 @@ const projectId = 'a591cf3c592769652bd36a7e6e31e137'
 const transports: Record<number, any> = {}
 SUPPORTED_CHAINS.forEach(chain => {
   if (chain.id === mainnet.id) transports[mainnet.id] = http(chain.rpcUrl)
+  if (chain.id === sepolia.id) transports[sepolia.id] = http(chain.rpcUrl)
   if (chain.id === bsc.id) transports[bsc.id] = http(chain.rpcUrl)
   if (chain.id === polygon.id) transports[polygon.id] = http(chain.rpcUrl)
   if (chain.id === arbitrum.id) transports[arbitrum.id] = http(chain.rpcUrl)
@@ -38,7 +39,7 @@ SUPPORTED_CHAINS.forEach(chain => {
 })
 
 export const config = createConfig({
-  chains: [mainnet, bsc, polygon, arbitrum, mantle],
+  chains: [sepolia, mainnet, bsc, polygon, arbitrum, mantle], // 将Sepolia放在第一位，作为默认网络
   connectors: [
     injected(),
     metaMask(),

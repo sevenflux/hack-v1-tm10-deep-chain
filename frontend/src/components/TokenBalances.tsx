@@ -24,8 +24,13 @@ export function TokenBalances() {
   // 获取当前区块号，用于监听链上变化
   const { data: blockNumber } = useBlockNumber({ watch: true })
 
-  // 获取所有支持链上的所有代币
-  const allTokens = Object.values(SUPPORTED_TOKENS).flat()
+  // 过滤掉测试网络，只保留主网
+  const mainnetChains = SUPPORTED_CHAINS.filter(chain => !chain.isTestnet)
+
+  // 获取所有支持链上的所有代币，排除测试网
+  const allTokens = Object.entries(SUPPORTED_TOKENS)
+    .filter(([key]) => !SUPPORTED_CHAINS.find(chain => chain.key === key && chain.isTestnet)) 
+    .flatMap(([_, tokens]) => tokens)
   
   // 准备合约读取请求 (仅ERC20代币)
   const erc20Tokens = allTokens.filter(token => token.address !== 'native')
@@ -47,7 +52,7 @@ export function TokenBalances() {
   })
 
   // 获取原生代币余额
-  const nativeTokens = SUPPORTED_CHAINS.map(chain => ({
+  const nativeTokens = mainnetChains.map(chain => ({
     chainId: chain.id,
     symbol: chain.nativeCurrency?.symbol || 'ETH',
     name: chain.nativeCurrency?.name || 'Ethereum',

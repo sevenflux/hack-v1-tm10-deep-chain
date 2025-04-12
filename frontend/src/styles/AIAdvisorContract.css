@@ -1,0 +1,223 @@
+.advisor-contract-container {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.history-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 18px;
+}
+
+.new-request-button {
+  background-color: #38a169;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.new-request-button:hover:not(:disabled) {
+  background-color: #2f855a;
+}
+
+.new-request-button:disabled {
+  background-color: #9ae6b4;
+  cursor: not-allowed;
+}
+
+.refresh-button {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: #3182ce;
+}
+
+.refresh-button:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #e53e3e;
+  text-align: center;
+  padding: 20px;
+  background-color: #fff5f5;
+  border-radius: 4px;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 30px 0;
+  color: #718096;
+}
+
+.empty-history p {
+  margin: 5px 0;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.history-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #f8fafc;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.history-time {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
+.history-details {
+  margin: 10px 0;
+}
+
+.history-recommendation {
+  font-size: 15px;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.history-loading {
+  color: #718096;
+  font-style: italic;
+  padding: 10px 0;
+}
+
+.history-links {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.history-link {
+  font-size: 13px;
+  color: #4a5568;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.history-link:hover {
+  background-color: #4299e1;
+  color: white;
+  border-color: #4299e1;
+}
+
+/* 迷你资产分配图表 */
+.mini-allocation-chart {
+  margin-top: 10px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.mini-allocation-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mini-allocation-item:last-child {
+  margin-bottom: 0;
+}
+
+.mini-allocation-label {
+  width: 60px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.mini-allocation-bar-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 20px;
+  position: relative;
+  background-color: #edf2f7;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mini-allocation-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background-color: #4299e1;
+  border-radius: 10px;
+}
+
+.mini-allocation-percentage {
+  position: relative;
+  z-index: 1;
+  margin-left: 8px;
+  color: #1a202c;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .history-item {
+    padding: 12px;
+  }
+  
+  .mini-allocation-chart {
+    padding: 8px;
+  }
+  
+  .history-links {
+    flex-direction: column;
+    gap: 5px;
+  }
+} 

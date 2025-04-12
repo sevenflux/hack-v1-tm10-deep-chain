@@ -1,5 +1,20 @@
 // 支持的区块链网络
-export const SUPPORTED_CHAINS = [
+export interface NetworkConfig {
+  id: number;
+  name: string;
+  key: string;
+  rpcUrl: string;
+  blockExplorer: string;
+  isTestnet?: boolean;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+    price: number;
+  };
+}
+
+export const SUPPORTED_CHAINS: NetworkConfig[] = [
   {
     id: 1,
     name: '以太坊主网',
@@ -10,7 +25,21 @@ export const SUPPORTED_CHAINS = [
       name: 'Ethereum',
       symbol: 'ETH',
       decimals: 18,
-      price: 1800 // 价格可以从API获取，这里为了简化硬编码
+      price: 1800 
+    }
+  },
+  {
+    id: 11155111,
+    name: 'Sepolia测试网',
+    key: 'sepolia',
+    rpcUrl: 'https://eth-sepolia.g.alchemy.com/v2/demo',
+    blockExplorer: 'https://sepolia.etherscan.io',
+    isTestnet: true,
+    nativeCurrency: {
+      name: 'Sepolia Ether', 
+      symbol: 'ETH',
+      decimals: 18,
+      price: 1800
     }
   },
   {
@@ -194,8 +223,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       price: 1
     },
     {
-      symbol: 'POL',
-      name: 'POL Token',
+      symbol: 'MATIC',
+      name: 'MATIC Token',
       address: '0x0000000000000000000000000000000000001010',
       decimals: 18,
       chainKey: 'polygon',
@@ -278,7 +307,39 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       chainId: 5000,
       price: 0.5
     }
+  ],
+  // 注释掉测试网代币配置，这些测试币没有实际价值
+  /*
+  sepolia: [
+    {
+      symbol: 'WETH',
+      name: 'Wrapped Ether',
+      address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // Sepolia上的WETH地址
+      decimals: 18,
+      chainId: 11155111,
+      chainKey: 'sepolia',
+      price: 1800
+    },
+    {
+      symbol: 'USDT',
+      name: 'Tether USD (Test)',
+      address: '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06', // 仅用于演示
+      decimals: 6,
+      chainId: 11155111,
+      chainKey: 'sepolia',
+      price: 1
+    },
+    {
+      symbol: 'IAUSD',
+      name: 'Investment Advisor USD',
+      address: '0x950c656375dbeb78a59a498c69df136fc35f9fcc', // 使用合约地址作为测试代币
+      decimals: 18,
+      chainId: 11155111,
+      chainKey: 'sepolia',
+      price: 1
+    }
   ]
+  */
 }
 
 // ERC20代币ABI

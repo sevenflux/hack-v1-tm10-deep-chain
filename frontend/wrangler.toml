@@ -1,3 +1,23 @@
 name = "ai-adviser"
 compatibility_date = "2023-01-01"
-pages_build_output_dir = "dist" 
+pages_build_output_dir = "dist"
+
+# 生产环境变量配置
+[vars]
+VITE_API_BASE_URL = "https://backend-api.com"  
+VITE_CONTRACT_ADDRESS = "0x950c656375dbeb78a59a498c69df136fc35f9fcc"  
+VITE_NETWORK_NAME = "sepolia"  
+VITE_CHAIN_ID = "11155111" 
+VITE_IPFS_GATEWAY = "https://ipfs.io/ipfs"
+VITE_ENABLE_VERIFICATION = "true"
+VITE_ENABLE_DEBUG = "false" 
+
+# 预览环境变量配置（可选）
+[env.preview.vars]
+VITE_API_BASE_URL = "https://preview-api.your-domain.com"
+VITE_ENABLE_DEBUG = "true"
+
+# 开发环境变量配置（可选）
+[env.development.vars]
+VITE_API_BASE_URL = "http://localhost:8000"
+VITE_ENABLE_DEBUG = "true" 

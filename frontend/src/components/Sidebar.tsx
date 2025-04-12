@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useAccount } from 'wagmi'
-import { AdvisorRequestInput, AllocationItem, aiApi, APIError } from '../config/api'
+import { useAccount, useBalance, useReadContracts, useBlockNumber } from 'wagmi'
+import { AdvisorRequestInput, AllocationItem, CryptoAsset, aiApi, APIError } from '../api'
+import { SUPPORTED_TOKENS, TOKEN_ABI, TokenInfo, SUPPORTED_CHAINS } from '../config/tokens'
 import '../styles/Sidebar.css'
 
 interface SidebarProps {
@@ -16,13 +17,18 @@ interface ChatMessage {
   type: MessageType;
   text: string;
   timestamp: number;
-  allocation?: AllocationItem[];
+  allocation?: { asset: string; percentage: number }[];
   cid?: string;
   txHash?: string;
 }
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
-  const { isConnected, address } = useAccount()
+  const { isConnected, address, chainId: _chainId } = useAccount()
+  
+  // 获取当前区块号，用于监听链上变化
+  const { data: blockNumber } = useBlockNumber({ watch: true })
+  
+  // 状态管理
   const [message, setMessage] = useState('')
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {
@@ -32,160 +38,250 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   ])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high'>('medium')
+  // 新增状态：是否显示风险选择器弹出框
+  const [showRiskSelector, setShowRiskSelector] = useState(false)
   
-  // 解析用户输入为投资请求
-  const parseUserInput = (input: string): AdvisorRequestInput | null => {
-    // 简单示例：根据关键词匹配风险等级
-    let riskLevel: 'low' | 'medium' | 'high' = 'medium';
-    if (input.includes('保守') || input.includes('低风险')) {
-      riskLevel = 'low';
-    } else if (input.includes('激进') || input.includes('高风险')) {
-      riskLevel = 'high';
+  // 资产相关状态
+  const [tokenBalances, setTokenBalances] = useState<{[key: string]: { token: TokenInfo, balance: number, value: number }}>({})
+  const [totalValue, setTotalValue] = useState(0)
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false)
+  
+  // 过滤掉测试网络，只保留主网
+  const mainnetChains = SUPPORTED_CHAINS.filter(chain => !chain.isTestnet)
+  
+  // 获取所有支持链上的所有代币，排除测试网
+  const allTokens = Object.entries(SUPPORTED_TOKENS)
+    .filter(([key]) => !SUPPORTED_CHAINS.find(chain => chain.key === key && chain.isTestnet)) 
+    .flatMap(([_, tokens]) => tokens)
+  
+  // 准备合约读取请求 (仅ERC20代币)
+  const erc20Tokens = allTokens.filter(token => token.address !== 'native')
+  const contracts = erc20Tokens.map(token => ({
+    address: token.address as `0x${string}`,
+    abi: TOKEN_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: token.chainId
+  }))
+  
+  // 获取ERC20代币余额
+  const { data: erc20Data, refetch: refetchErc20 } = useReadContracts({
+    contracts,
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000, // 每30秒自动刷新一次
+    }
+  })
+  
+  // 获取原生代币余额
+  const nativeTokens = mainnetChains.map(chain => ({
+    chainId: chain.id,
+    symbol: chain.nativeCurrency?.symbol || 'ETH',
+    name: chain.nativeCurrency?.name || 'Ethereum',
+    decimals: chain.nativeCurrency?.decimals || 18,
+    price: chain.nativeCurrency?.price || 1, // 使用配置中的价格
+    chainKey: chain.key
+  }))
+  
+  // 为每个链创建useBalance hook
+  const nativeBalances = nativeTokens.map(token => {
+    const { data, refetch } = useBalance({
+      address,
+      chainId: token.chainId,
+      query: {
+        enabled: Boolean(address),
+        refetchInterval: 30000, // 每30秒自动刷新一次
+      }
+    })
+    return { data, refetch, token }
+  })
+  
+  // 刷新所有余额
+  const refreshAllBalances = () => {
+    if (!address) return;
+    
+    setIsLoadingBalances(true);
+    
+    // 刷新ERC20代币余额
+    refetchErc20();
+    
+    // 刷新所有原生代币余额
+    nativeBalances.forEach(({ refetch }) => refetch());
+  };
+  
+  // 当区块号变化时，自动刷新余额
+  useEffect(() => {
+    if (blockNumber && address) {
+      refreshAllBalances();
+    }
+  }, [blockNumber, address]);
+  
+  // 处理余额数据变化
+  useEffect(() => {
+    if (address) {
+      setIsLoadingBalances(true)
+      
+      // 初始化新的余额对象
+      const newBalances: {[key: string]: { token: TokenInfo, balance: number, value: number }} = {}
+      let newTotalValue = 0
+      
+      // 处理ERC20代币余额
+      if (erc20Data) {
+        erc20Data.forEach((result, index) => {
+          const token = erc20Tokens[index]
+          if (result.status === 'success' && result.result) {
+            const rawBalance = result.result
+            const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals)
+            
+            // 使用配置的价格
+            const value = formattedBalance * (token.price || 1)
+            
+            if (formattedBalance > 0) {
+              newBalances[token.symbol + '-' + token.chainKey] = {
+                token,
+                balance: formattedBalance,
+                value
+              }
+              newTotalValue += value
+            }
+          }
+        })
+      }
+      
+      // 处理原生代币余额
+      nativeBalances.forEach(({ data, token }) => {
+        if (data) {
+          const formattedBalance = Number(data.formatted)
+          const value = formattedBalance * token.price
+          
+          if (formattedBalance > 0) {
+            newBalances[token.symbol + '-' + token.chainKey] = {
+              token: {
+                symbol: token.symbol,
+                name: token.name,
+                address: 'native',
+                decimals: token.decimals,
+                chainKey: token.chainKey,
+                chainId: token.chainId,
+                price: token.price
+              },
+              balance: formattedBalance,
+              value
+            }
+            newTotalValue += value
+          }
+        }
+      })
+      
+      setTokenBalances(newBalances)
+      setTotalValue(newTotalValue)
+      setIsLoadingBalances(false)
+    }
+  }, [address, erc20Data, nativeBalances])
+  
+  // 转换为API所需的CryptoAsset格式
+  const calculateAssetDistribution = (): CryptoAsset[] => {
+    // 对象为空时返回默认值
+    if (Object.keys(tokenBalances).length === 0) {
+      return [
+        { symbol: 'ETH', percentage: 50 },
+        { symbol: 'USDC', percentage: 30 },
+        { symbol: 'BTC', percentage: 20 }
+      ];
     }
     
-    // 尝试匹配投资金额，例如"投资5000元"或"10000美元"
-    const amountMatch = input.match(/投资\s*(\d+)\s*(元|美元|块|美金)/);
-    const amount = amountMatch ? parseInt(amountMatch[1]) : 10000; // 默认10000
+    const assets: CryptoAsset[] = Object.values(tokenBalances).map(item => ({
+      symbol: item.token.symbol,
+      percentage: totalValue > 0 ? Math.round((item.value / totalValue) * 100) : 0
+    }));
     
-    // 尝试匹配投资期限，例如"3年期"或"5年投资"
-    const horizonMatch = input.match(/(\d+)\s*年/);
-    const horizon = horizonMatch ? parseInt(horizonMatch[1]) : 3; // 默认3年
+    // 确保百分比总和为100%
+    const totalPercentage = assets.reduce((sum, asset) => sum + asset.percentage, 0);
+    if (totalPercentage !== 100 && totalPercentage > 0) {
+      // 将差值加到最大的资产上或第一个资产上
+      const maxAsset = assets.reduce((prev, current) => 
+        prev.percentage > current.percentage ? prev : current, 
+        assets[0]
+      );
+      maxAsset.percentage += (100 - totalPercentage);
+    }
     
-    // 尝试匹配资产类型
-    const assets: string[] = [];
-    if (input.includes('比特币') || input.includes('BTC')) assets.push('BTC');
-    if (input.includes('以太坊') || input.includes('ETH')) assets.push('ETH');
-    if (input.includes('稳定币') || input.includes('USDT') || input.includes('USDC')) assets.push('stablecoins');
-    
-    return {
-      riskLevel,
-      amount,
-      horizon,
-      assets: assets.length > 0 ? assets : undefined
-    };
-  }
+    return assets;
+  };
   
-  const handleSendMessage = async () => {
-    if (!message.trim() || !isConnected || !address) return
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || isProcessing) return;
     
-    // 添加用户消息到聊天历史
-    const userMessage: ChatMessage = {
-      type: 'user', 
-      text: message,
-      timestamp: Date.now()
-    };
-    setChatHistory(prev => [...prev, userMessage]);
-    setMessage('');
-    
-    // 显示处理中状态
     setIsProcessing(true);
     
-    // 添加"正在思考"的系统消息
+    // 添加用户消息到聊天记录
     setChatHistory(prev => [...prev, {
-      type: 'system',
-      text: '正在分析您的投资需求...',
+      type: 'user',
+      text: message,
       timestamp: Date.now()
     }]);
     
-    try {
-      // 解析用户输入
-      const requestInput = parseUserInput(message);
-      
-      if (requestInput) {
-        // 显示解析到的参数给用户
-        setChatHistory(prev => [...prev.filter(msg => msg.type !== 'system'), {
-          type: 'system',
-          text: `正在为您生成投资建议：风险偏好-${
-            requestInput.riskLevel === 'low' ? '低' : 
-            requestInput.riskLevel === 'medium' ? '中' : '高'
-          }，投资金额-${requestInput.amount}元，投资期限-${requestInput.horizon}年`,
-          timestamp: Date.now()
-        }]);
-        
-        try {
-          // 调用AI服务API获取建议
-          const response = await aiApi.getAdvice(address, requestInput);
-          
-          // 移除"正在思考"的系统消息
-          setChatHistory(prev => prev.filter(msg => msg.type !== 'system'));
-          
-          if (response.success && response.data) {
-            // 添加AI回复
-            setChatHistory(prev => [...prev, {
-              type: 'ai',
-              text: response.data?.recommendation || '获取推荐建议失败',
-              allocation: response.data?.allocation,
-              cid: response.data?.cid,
-              txHash: response.data?.txHash,
-              timestamp: Date.now()
-            }]);
-            
-            // 添加区块链验证信息
-            if (response.data?.txHash && response.data?.cid) {
-              setChatHistory(prev => [...prev, {
-                type: 'system',
-                text: `✓ 此建议已通过区块链验证 [交易哈希: ${response.data?.txHash.substring(0, 10)}...] [IPFS: ${response.data?.cid.substring(0, 10)}...]`,
-                timestamp: Date.now()
-              }]);
-              
-              // 检查交易细节和IPFS数据
-              try {
-                // 异步获取交易验证信息，不阻塞用户界面
-                const verifyPromise = aiApi.verifyTransaction(response.data.txHash);
-                
-                // 使用Promise.race，两秒后如果没有结果就放弃，不阻塞用户体验
-                const verifyResult = await Promise.race([
-                  verifyPromise,
-                  new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
-                ]);
-                
-                if (verifyResult && verifyResult.success && verifyResult.data) {
-                  setChatHistory(prev => [...prev, {
-                    type: 'system',
-                    text: `✓ 区块链验证成功：区块号 ${verifyResult.data?.blockNumber || '未知'}`,
-                    timestamp: Date.now()
-                  }]);
-                }
-              } catch (verifyError) {
-                console.error('验证交易出错:', verifyError);
-                // 不向用户显示验证错误，因为建议已经返回
-              }
-            }
-          } else {
-            // 处理错误
-            setChatHistory(prev => [...prev, {
-              type: 'system',
-              text: `获取建议时出错: ${response.message || '未知错误'}`,
-              timestamp: Date.now()
-            }]);
-          }
-        } catch (apiError) {
-          // 处理API错误
-          let errorMessage = '与AI服务通信时出错，请稍后重试。';
-          
-          if (apiError instanceof APIError) {
-            errorMessage = `错误: ${apiError.message}`;
-          }
-          
-          setChatHistory(prev => [...prev.filter(msg => msg.type !== 'system'), {
-            type: 'system',
-            text: errorMessage,
-            timestamp: Date.now()
-          }]);
-        }
-      } else {
-        // 无法解析用户请求
-        setChatHistory(prev => [...prev.filter(msg => msg.type !== 'system'), {
-          type: 'ai',
-          text: '抱歉，我无法理解您的请求。请尝试明确描述您的投资需求，例如"我想投资10000元，期限3年，中等风险"。',
-          timestamp: Date.now()
-        }]);
-      }
-    } catch (error) {
-      console.error('AI顾问处理失败:', error);
-      setChatHistory(prev => [...prev.filter(msg => msg.type !== 'system'), {
+    const userInput = message;
+    setMessage('');
+    
+    // 获取资产数据
+    const cryptoAssets = calculateAssetDistribution();
+    
+    // 创建投资请求
+    const requestInput: AdvisorRequestInput = {
+      riskLevel,
+      amount: Math.round(totalValue), // 使用实际总资产价值
+      cryptoAssets // 使用实际资产分布
+    };
+    
+    // 将解析后的请求显示出来
+    setChatHistory(prev => [...prev, {
+      type: 'system',
+      text: `正在处理您的请求：风险等级-${
+        requestInput.riskLevel === 'low' ? '低' : 
+        requestInput.riskLevel === 'medium' ? '中' : '高'
+      }，总资产价值-${requestInput.amount}美元，当前加密货币资产分布：${
+        requestInput.cryptoAssets.map(asset => `${asset.symbol}: ${asset.percentage}%`).join(', ')
+      }`,
+      timestamp: Date.now()
+    }]);
+    
+    if (!isConnected || !address) {
+      setChatHistory(prev => [...prev, {
         type: 'system',
-        text: '与AI服务通信时出错，请稍后重试。',
+        text: '请先连接您的钱包以获取投资建议。',
+        timestamp: Date.now()
+      }]);
+      setIsProcessing(false);
+      return;
+    }
+    
+    // 调用API获取投资建议
+    try {
+      const response = await aiApi.getAdvice(address, requestInput);
+      
+      // 更新聊天历史
+      setChatHistory(prev => [...prev, {
+        type: 'ai',
+        text: response.data?.recommendation || '无法获取建议',
+        timestamp: Date.now(),
+        allocation: response.data?.allocation,
+        txHash: response.data?.txHash,
+        cid: response.data?.cid
+      }]);
+      
+    } catch (error) {
+      let errorMessage = '获取投资建议时出错，请稍后再试。';
+      
+      if (error instanceof APIError) {
+        errorMessage = error.message;
+      }
+      
+      setChatHistory(prev => [...prev, {
+        type: 'system',
+        text: errorMessage,
         timestamp: Date.now()
       }]);
     } finally {
@@ -193,24 +289,48 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }
   
-  // 渲染资产配置建议
-  const renderAllocation = (allocation: AllocationItem[]) => {
+  // 渲染资产分配建议
+  const renderAllocation = (allocation: { asset: string; percentage: number }[]) => {
     return (
-      <div className="allocation-chart">
-        <h4>推荐资产配置：</h4>
-        <div className="allocation-items">
+      <div className="allocation-container">
+        <h4>推荐资产分配</h4>
+        <div className="allocation-bars">
           {allocation.map((item, index) => (
             <div key={index} className="allocation-item">
-              <div className="allocation-bar" style={{ width: `${item.percentage}%` }}></div>
               <div className="allocation-label">
-                <span className="allocation-asset">{item.asset}</span>
-                <span className="allocation-percentage">{item.percentage}%</span>
+                <span className="asset-name">{item.asset}</span>
+                <span className="asset-percentage">{item.percentage}%</span>
+              </div>
+              <div className="allocation-bar">
+                <div 
+                  className="allocation-fill"
+                  style={{ 
+                    width: `${item.percentage}%`,
+                    backgroundColor: getAssetColor(item.asset)
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
       </div>
     );
+  }
+  
+  // 为不同资产分配不同颜色
+  const getAssetColor = (asset: string) => {
+    const colorMap: {[key: string]: string} = {
+      'BTC': '#f7931a',
+      'ETH': '#627eea',
+      'USDC': '#2775ca',
+      'XRP': '#23292f',
+      'ADA': '#0033ad',
+      'SOL': '#14f195',
+      'AVAX': '#e84142',
+      'DOT': '#e6007a'
+    };
+    
+    return colorMap[asset] || '#888888'; // 默认颜色
   }
   
   // 当侧边栏打开时，滚动到最新消息
@@ -222,6 +342,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       }
     }
   }, [isOpen, chatHistory]);
+  
+  // 切换风险选择器的显示/隐藏
+  const toggleRiskSelector = () => {
+    setShowRiskSelector(!showRiskSelector);
+  }
   
   return (
     <>
@@ -263,27 +388,112 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     >
                       查看IPFS数据
                     </a>
-                    <a 
-                      href={`https://etherscan.io/tx/${msg.txHash}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <button 
+                      onClick={() => {
+                        // 尝试使用API验证交易
+                        try {
+                          aiApi.verifyTransaction(msg.txHash as string)
+                            .then(result => {
+                              if (result.success && result.data) {
+                                alert(`验证成功: 交易已在区块 ${result.data.blockNumber} 确认`);
+                              } else {
+                                // 如果API验证失败，回退到Etherscan查看
+                                window.open(`https://etherscan.io/tx/${msg.txHash}`, '_blank');
+                              }
+                            })
+                            .catch(() => {
+                              // 出错时也回退到Etherscan
+                              window.open(`https://etherscan.io/tx/${msg.txHash}`, '_blank');
+                            });
+                        } catch (error) {
+                          // 出错时回退到Etherscan
+                          window.open(`https://etherscan.io/tx/${msg.txHash}`, '_blank');
+                        }
+                      }}
                       className="metadata-link"
                     >
                       查看区块链交易
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>
             ))}
           </div>
+          
+          {/* 风险偏好选择弹出框 */}
+          {isConnected && showRiskSelector && (
+            <div className="risk-selector-popup">
+              <div className="risk-selector-content">
+                <div className="risk-selector-header">
+                  <h4>选择风险承受能力</h4>
+                  <button className="close-risk-selector" onClick={toggleRiskSelector}>×</button>
+                </div>
+                <div className="risk-options">
+                  <label className={`risk-option ${riskLevel === 'low' ? 'selected' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="risk" 
+                      value="low" 
+                      checked={riskLevel === 'low'} 
+                      onChange={() => {
+                        setRiskLevel('low');
+                        setShowRiskSelector(false);
+                      }} 
+                    />
+                    <span>保守</span>
+                  </label>
+                  <label className={`risk-option ${riskLevel === 'medium' ? 'selected' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="risk" 
+                      value="medium" 
+                      checked={riskLevel === 'medium'} 
+                      onChange={() => {
+                        setRiskLevel('medium');
+                        setShowRiskSelector(false);
+                      }} 
+                    />
+                    <span>稳健</span>
+                  </label>
+                  <label className={`risk-option ${riskLevel === 'high' ? 'selected' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="risk" 
+                      value="high" 
+                      checked={riskLevel === 'high'} 
+                      onChange={() => {
+                        setRiskLevel('high');
+                        setShowRiskSelector(false);
+                      }} 
+                    />
+                    <span>激进</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="chat-input">
+            {isConnected && (
+              <button 
+                className={`risk-level-button ${riskLevel}`} 
+                onClick={toggleRiskSelector}
+                title="设置风险承受能力"
+              >
+                <span className="risk-icon"></span>
+                <span className="risk-label">{
+                  riskLevel === 'low' ? '保守' : 
+                  riskLevel === 'medium' ? '稳健' : '激进'
+                }</span>
+              </button>
+            )}
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="输入您的投资需求..."
+              placeholder="输入您的问题..."
               disabled={!isConnected || isProcessing}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
             />
             <button 
               onClick={handleSendMessage} 

@@ -5,10 +5,12 @@ import { Navbar } from './components/Navbar'
 import { Sidebar } from './components/Sidebar'
 import { WalletOptions } from './components/WalletOptions'
 import { TokenBalances } from './components/TokenBalances'
+import { AIAdvisorContract } from './components/AIAdvisorContract'
 
 function App() {
   const { isConnected } = useAccount()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'assets' | 'history'>('assets')
   
   // 当钱包断开连接时，自动关闭侧边栏
   useEffect(() => {
@@ -33,12 +35,33 @@ function App() {
           {!isConnected ? (
             <div className="connect-section">
               <h2>欢迎使用AI投资助手</h2>
-              <p>连接您的钱包以查看您在不同区块链上的资产分布</p>
+              <p>连接您的钱包以查看您在不同区块链上的资产分布和获取AI投资建议</p>
               <WalletOptions />
             </div>
           ) : (
             <div className="dashboard-section">
-              <TokenBalances />
+              <div className="dashboard-tabs">
+                <button 
+                  className={`tab-button ${activeTab === 'assets' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('assets')}
+                >
+                  资产概览
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('history')}
+                >
+                  投资建议历史
+                </button>
+              </div>
+              
+              <div className="tab-content">
+                {activeTab === 'assets' ? (
+                  <TokenBalances />
+                ) : (
+                  <AIAdvisorContract />
+                )}
+              </div>
             </div>
           )}
         </main>
