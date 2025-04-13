@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 import { WalletOptions } from './WalletOptions'
-import logo from '../assets/epoch.png'
+import logo from '../assets/Logo.jpg'
 import '../styles/Navbar.css'
 import { apiClient, FearGreedIndex } from '../api'
 
@@ -76,7 +76,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="navbar-left">
         <img src={logo} alt="Epoch Logo" className="navbar-logo" />
-        <h1 className="navbar-title">DeepChain</h1>
+        <h1 className="navbar-title">F𝕚Mind</h1>
       </div>
       
       <div className="navbar-center">
