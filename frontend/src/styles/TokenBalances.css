@@ -7,32 +7,80 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
   
   .dashboard-header h2 {
     margin: 0;
     color: #2c3e50;
+    font-size: 1.8rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #3498db;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dashboard-icon {
+    font-size: 1.6rem;
+  }
+  
+  .dashboard-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
   }
   
   .total-value-card {
     background: linear-gradient(135deg, #3498db, #2c3e50);
     color: white;
-    padding: 1rem 2rem;
+    padding: 1.5rem 2rem;
     border-radius: 12px;
     text-align: center;
+    width: 260px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
   .total-value-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    opacity: 0.9;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
   
   .total-value-amount {
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .update-info {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    background-color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eaeaea;
+  }
+  
+  .refresh-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #2ecc71;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
   }
   
   .dashboard-grid {
@@ -42,7 +90,7 @@
     margin-bottom: 1.5rem;
   }
   
-  .chart-card, .summary-card, .tokens-table-card {
+  .chart-card, .asset-list-card {
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -50,7 +98,7 @@
     border: 1px solid #e1e4e8;
   }
   
-  .chart-card h3, .summary-card h3, .tokens-table-card h3 {
+  .chart-card h3, .asset-list-card h3 {
     margin-top: 0;
     margin-bottom: 1.5rem;
     color: #2c3e50;
@@ -61,94 +109,90 @@
     height: 300px;
   }
   
-  .chain-distribution {
+  /* 资产列表卡片样式 */
+  .asset-list {
+    max-height: 400px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
   }
   
-  .chain-item {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 0.5rem;
-    align-items: center;
+  .chain-assets {
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 1rem;
   }
   
-  .chain-name {
-    font-weight: 500;
-    color: #2c3e50;
-    grid-column: 1;
-    grid-row: 1;
+  .chain-assets:last-child {
+    border-bottom: none;
   }
   
-  .chain-value {
-    color: #2c3e50;
-    font-weight: 600;
-    grid-column: 2;
-    grid-row: 1;
-  }
-  
-  .chain-percentage {
-    color: #7f8c8d;
-    grid-column: 3;
-    grid-row: 1;
-    text-align: right;
-  }
-  
-  .progress-bar {
-    height: 8px;
-    background-color: #ecf0f1;
-    border-radius: 4px;
-    overflow: hidden;
-    grid-column: 1 / span 3;
-    grid-row: 2;
-  }
-  
-  .progress {
-    height: 100%;
-    border-radius: 4px;
-  }
-  
-  .tokens-table-card {
-    margin-top: 1.5rem;
-  }
-  
-  .table-container {
-    overflow-x: auto;
-  }
-  
-  .tokens-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .tokens-table th, .tokens-table td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e1e4e8;
-  }
-  
-  .tokens-table th {
-    font-weight: 600;
-    color: #2c3e50;
-    background-color: #f8f9fa;
-  }
-  
-  .tokens-table tr:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .token-cell {
+  .chain-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
+    margin-bottom: 0.5rem;
   }
   
-  .token-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+  .chain-header h4 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+  }
+  
+  .chain-total {
+    font-weight: 600;
+    color: #3498db;
+  }
+  
+  .token-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .token-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .token-item:last-child {
+    border-bottom: none;
+  }
+  
+  .token-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .token-symbol {
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  .token-balance {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+  }
+  
+  .token-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+  
+  .token-price {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+  }
+  
+  .token-total-value {
+    font-weight: 600;
+    color: #2c3e50;
   }
   
   .loading-container, .error-container, .empty-state {
@@ -177,57 +221,56 @@
     }
   }
   
-  .dashboard-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.5rem;
-  }
-  
-  .refresh-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: background-color 0.2s;
-  }
-  
-  .refresh-button:hover:not(:disabled) {
-    background-color: #2980b9;
-  }
-  
-  .refresh-button:disabled {
-    background-color: #95a5a6;
-    cursor: not-allowed;
-  }
-  
-  .last-refresh {
-    font-size: 0.8rem;
-    color: #7f8c8d;
-    margin-bottom: 0.5rem;
+  @keyframes pulse {
+    0% {
+      opacity: 0.5;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 0.5;
+      transform: scale(0.8);
+    }
   }
   
   @media (max-width: 768px) {
     .dashboard-header {
       flex-direction: column;
-      align-items: stretch;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1rem;
+    }
+    
+    .dashboard-header h2 {
+      margin-bottom: 0.5rem;
     }
     
     .dashboard-actions {
-      align-items: stretch;
+      width: 100%;
+      align-items: center;
+    }
+    
+    .total-value-card {
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    .update-info {
+      width: 100%;
+      max-width: 300px;
+      justify-content: center;
+      margin-top: 0.5rem;
     }
     
     .dashboard-grid {
       grid-template-columns: 1fr;
+      padding: 0 1rem;
     }
     
-    .tokens-table th, .tokens-table td {
-      padding: 0.75rem 0.5rem;
+    .total-value-amount {
+      font-size: 1.8rem;
     }
   } 
