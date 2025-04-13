@@ -16,7 +16,12 @@ class Settings:
         self.PORT = 8000
         
         # CORS设置
-        self.CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000"]
+        self.CORS_ORIGINS = [
+            "http://localhost:3000", 
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173", 
+            "http://localhost:8000"
+        ]
         
         # 区块链设置
         self.BLOCKCHAIN_RPC_URL = ""
@@ -25,6 +30,7 @@ class Settings:
         self.SERVER_ADDRESS = ""
         self.CHAIN_ID = 11155111
         self.NETWORK_NAME = "sepolia"
+        self.CONTRACT_ABI = ""
         
         # IPFS设置
         self.PINATA_API_KEY = None
@@ -67,10 +73,14 @@ class Settings:
                 elif isinstance(current_value, list) and attr_name == "CORS_ORIGINS":
                     setattr(self, attr_name, env_value.split(","))
                 else:
-                    # 特殊处理 BLOCKCHAIN_RPC_URL，移除可能的引号
-                    if env_value.startswith('"') and env_value.endswith('"'):
-                        env_value = env_value[1:-1]
-                    setattr(self, attr_name, env_value)
+                    # 特殊处理，移除可能的引号
+                    processed_value = env_value
+                    if processed_value.startswith('"') and processed_value.endswith('"'):
+                        processed_value = processed_value[1:-1]
+                    elif processed_value.startswith("'") and processed_value.endswith("'"):
+                        processed_value = processed_value[1:-1]
+                        
+                    setattr(self, attr_name, processed_value)
     
     def _load_dotenv(self):
         """加载.env文件"""

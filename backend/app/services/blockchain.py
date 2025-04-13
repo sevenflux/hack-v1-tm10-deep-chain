@@ -20,6 +20,7 @@ PRIVATE_KEY = settings.PRIVATE_KEY
 SERVER_ADDRESS = settings.SERVER_ADDRESS
 CHAIN_ID = settings.CHAIN_ID
 NETWORK_NAME = settings.NETWORK_NAME
+CONTRACT_ABI_JSON = settings.CONTRACT_ABI
 
 # 初始化Web3连接
 w3 = Web3(Web3.HTTPProvider(BLOCKCHAIN_RPC_URL))
@@ -45,155 +46,16 @@ try:
 except Exception as e:
     logger.error(f"连接区块链时出错: {str(e)}")
 
-# 从JSON文件加载合约ABI
+# 使用环境变量中的ABI
 try:
-    try:
-        # 尝试从当前目录的contracts文件夹加载ABI
-        with open("./contracts/abi.json", "r") as f:
-            CONTRACT_ABI = json.load(f)
-    except:
-        # 尝试从项目根目录加载ABI
-        with open("../contracts/abi.json", "r") as f:
-            CONTRACT_ABI = json.load(f)
-            
-    logger.info("成功加载合约ABI")
-except Exception as e:
-    logger.warning(f"无法从文件加载ABI: {str(e)}, 使用内置ABI")
-    # 使用硬编码的ABI
-    CONTRACT_ABI = [
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "bytes32",
-				"name": "requestHash",
-				"type": "bytes32"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "cid",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			}
-		],
-		"name": "RequestRecorded",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "advisorServer",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getUserRequests",
-		"outputs": [
-			{
-				"internalType": "bytes32[]",
-				"name": "requestHashes",
-				"type": "bytes32[]"
-			},
-			{
-				"internalType": "string[]",
-				"name": "cids",
-				"type": "string[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "timestamps",
-				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "requestHash",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "string",
-				"name": "cid",
-				"type": "string"
-			},
-			{
-				"internalType": "bytes",
-				"name": "signature",
-				"type": "bytes"
-			}
-		],
-		"name": "recordRequest",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_newAdvisor",
-				"type": "address"
-			}
-		],
-		"name": "setAdvisorServer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	}
-]
+    CONTRACT_ABI = json.loads(CONTRACT_ABI_JSON)
+    logger.info("成功从环境变量加载合约ABI")
+except json.JSONDecodeError as e:
+    logger.error(f"无法解析环境变量中的ABI: {e}")
+    # 这里可以抛出错误或使用备用ABI
+    CONTRACT_ABI = [] # 或者抛出异常，取决于错误处理策略
+
+logger.info("使用内置ABI配置")
 
 
 def create_signature(message_to_sign: str, timestamp: Optional[int] = None) -> Tuple[str, int]:
@@ -234,19 +96,7 @@ def create_signature(message_to_sign: str, timestamp: Optional[int] = None) -> T
         if signer_address.lower() != SERVER_ADDRESS.lower():
             logger.error(f"签名者地址不匹配: 私钥对应地址 {signer_address}, 配置的服务器地址 {SERVER_ADDRESS}")
             raise ValueError("签名者地址与配置的服务器地址不匹配")
-        
-        # # 检查合约中的advisorServer
-        # try:
-        #     contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
-        #     advisor_server = contract.functions.advisorServer().call()
-            
-        #     if advisor_server.lower() != SERVER_ADDRESS.lower():
-        #         logger.warning(f"警告: 服务器地址 {SERVER_ADDRESS} 与合约中的advisorServer {advisor_server} 不匹配")
-        #         logger.warning("请确保合约所有者已调用setAdvisorServer更新为正确的地址")
-        # except Exception as e:
-        #     logger.warning(f"无法验证合约中的advisorServer地址: {str(e)}")
-        
-        # 使用Web3.py的方法签名，这会自动加上Ethereum签名前缀
+       
         signature = w3.eth.account.sign_message(
             encode_defunct(hexstr=message_hash.hex()),
             private_key=PRIVATE_KEY
@@ -285,66 +135,54 @@ async def record_to_blockchain(user_address: str, request_hash: str, cid: str, s
         # 确保用户地址也是校验和格式
         user_address = w3.to_checksum_address(user_address)
         
-        # 尝试多次连接
-        retry_count = 0
-        max_retries = 3
-        while retry_count < max_retries:
-            try:
-                # 获取合约实例
-                contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
-                
-                # 格式化请求哈希
-                request_hash_bytes = bytes.fromhex(request_hash[2:] if request_hash.startswith('0x') else request_hash)
-                
-                # 格式化签名
-                signature_bytes = bytes.fromhex(signature[2:] if signature.startswith('0x') else signature)
-                
-                # 当前gas价格
-                gas_price = w3.eth.gas_price
-                # 可选: 增加gas价格以加快确认
-                gas_price = int(gas_price * 1.1)  # 增加10%
-                
-                # 构建交易
-                tx = contract.functions.recordRequest(
-                    user_address,
-                    request_hash_bytes,
-                    cid,
-                    signature_bytes
-                ).build_transaction({
-                    'from': SERVER_ADDRESS,
-                    'gas': 2000000,
-                    'gasPrice': gas_price,
-                    'nonce': w3.eth.get_transaction_count(SERVER_ADDRESS)
-                })
-                
-                # 签名交易
-                signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
-                
-                # 发送交易
-                tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                
-                # 等待交易被确认
-                tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-                
-                if tx_receipt.status == 1:  # 1表示成功
-                    logger.info(f"交易成功记录到区块链，交易哈希: {tx_hash.hex()}")
-                    return tx_hash.hex()
-                else:
-                    logger.error(f"交易失败，交易哈希: {tx_hash.hex()}")
-                    raise Exception("区块链交易失败")
-                
-            except ContractLogicError as e:
-                logger.error(f"合约执行错误: {str(e)}")
-                raise
-            
-            except Exception as e:
-                retry_count += 1
-                if retry_count >= max_retries:
-                    logger.error(f"经过{max_retries}次尝试后仍然失败: {str(e)}")
-                    raise
-                logger.warning(f"重试({retry_count}/{max_retries}): {str(e)}")
-                time.sleep(2)  # 等待2秒后重试
-                
+        # 获取合约实例
+        contract_address = w3.to_checksum_address(CONTRACT_ADDRESS)
+        contract = w3.eth.contract(address=contract_address, abi=CONTRACT_ABI)
+        
+        # 格式化请求哈希
+        request_hash_bytes = bytes.fromhex(request_hash[2:] if request_hash.startswith('0x') else request_hash)
+        
+        # 格式化签名
+        signature_bytes = bytes.fromhex(signature[2:] if signature.startswith('0x') else signature)
+        
+        # 当前gas价格
+        gas_price = w3.eth.gas_price
+        # 可选: 增加gas价格以加快确认
+        gas_price = int(gas_price * 1.1)  # 增加10%
+        
+        # 构建交易
+        tx = contract.functions.recordRequest(
+            user_address,
+            request_hash_bytes,
+            cid,
+            signature_bytes
+        ).build_transaction({
+            'from': SERVER_ADDRESS,
+            'gas': 2000000,
+            'gasPrice': gas_price,
+            'nonce': w3.eth.get_transaction_count(SERVER_ADDRESS)
+        })
+        
+        # 签名交易
+        signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
+        
+        # 发送交易
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
+        # 等待交易被确认
+        tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+        
+        if tx_receipt.status == 1:  # 1表示成功
+            logger.info(f"交易成功记录到区块链，交易哈希: {tx_hash.hex()}")
+            return tx_hash.hex()
+        else:
+            logger.error(f"交易失败，交易哈希: {tx_hash.hex()}")
+            raise Exception("区块链交易失败")
+        
+    except ContractLogicError as e:
+        logger.error(f"合约执行错误: {str(e)}")
+        raise
+    
     except Exception as e:
         logger.error(f"记录到区块链时出错: {str(e)}")
         raise
@@ -365,7 +203,8 @@ async def get_user_requests(user_address: str) -> List[Dict[str, Any]]:
         user_address = w3.to_checksum_address(user_address)
         
         # 获取合约实例
-        contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+        contract_address = w3.to_checksum_address(CONTRACT_ADDRESS)
+        contract = w3.eth.contract(address=contract_address, abi=CONTRACT_ABI)
         
         # 调用合约方法
         result = contract.functions.getUserRequests(user_address).call()
@@ -413,12 +252,13 @@ async def verify_transaction(tx_hash: str, timeout: int = 30) -> Dict[str, Any]:
                 
                 if tx_receipt:
                     # 提取事件数据
-                    contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+                    contract_address = w3.to_checksum_address(CONTRACT_ADDRESS)
+                    contract = w3.eth.contract(address=contract_address, abi=CONTRACT_ABI)
                     events = []
                     for log in tx_receipt.logs:
                         try:
                             log_address = w3.to_checksum_address(log['address'])
-                            if log_address.lower() == CONTRACT_ADDRESS.lower():
+                            if log_address.lower() == contract_address.lower():
                                 parsed_log = contract.events.RequestRecorded().process_log(log)
                                 
                                 # 创建符合我们API期望的事件对象
