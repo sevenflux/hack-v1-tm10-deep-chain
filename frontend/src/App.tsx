@@ -6,6 +6,7 @@ import { Sidebar } from './components/Sidebar'
 import { WalletOptions } from './components/WalletOptions'
 import { TokenBalances } from './components/TokenBalances'
 import { AIAdvisorContract } from './components/AIAdvisorContract'
+import { updateAllTokenPrices } from './config/tokens'
 
 function App() {
   const { isConnected } = useAccount()
@@ -18,6 +19,26 @@ function App() {
       setSidebarOpen(false);
     }
   }, [isConnected]);
+
+  // 初始化和定期更新代币价格
+  useEffect(() => {
+    // 应用加载时立即更新一次价格
+    const fetchInitialPrices = async () => {
+      await updateAllTokenPrices();
+      console.log('价格数据初始化完成');
+    };
+    
+    fetchInitialPrices();
+    
+    // 设置定时器，每30秒更新一次价格
+    const priceUpdateInterval = setInterval(async () => {
+      await updateAllTokenPrices();
+      console.log('价格数据已更新');
+    }, 30 * 1000); // 30秒
+    
+    // 清理定时器
+    return () => clearInterval(priceUpdateInterval);
+  }, []);
 
   // 侧边栏切换函数，只有在连接钱包后才能打开
   const handleToggleSidebar = () => {

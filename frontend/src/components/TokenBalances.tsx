@@ -1,7 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAccount, useReadContracts, useBalance, useBlockNumber } from 'wagmi'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import { SUPPORTED_TOKENS, TOKEN_ABI, TokenInfo, SUPPORTED_CHAINS } from '../config/tokens'
+import { 
+  SUPPORTED_TOKENS, 
+  TOKEN_ABI, 
+  TokenInfo, 
+  SUPPORTED_CHAINS, 
+  getTokenPrice, 
+  getNativeCurrencyPrice,
+  updateAllTokenPrices
+} from '../config/tokens'
 import '../styles/TokenBalances.css'
 
 // 饼图颜色
@@ -20,6 +28,7 @@ export function TokenBalances() {
   const [totalValue, setTotalValue] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
+  const [pricesUpdated, setPricesUpdated] = useState(false)
 
   // 获取当前区块号，用于监听链上变化
   const { data: blockNumber } = useBlockNumber({ watch: true })
@@ -57,7 +66,6 @@ export function TokenBalances() {
     symbol: chain.nativeCurrency?.symbol || 'ETH',
     name: chain.nativeCurrency?.name || 'Ethereum',
     decimals: chain.nativeCurrency?.decimals || 18,
-    price: chain.nativeCurrency?.price || 1, // 使用配置中的价格
     chainKey: chain.key
   }))
 
@@ -74,11 +82,25 @@ export function TokenBalances() {
     return { data, isError, isLoading, refetch, token }
   })
 
+  // 刷新价格数据并重新计算资产价值
+  const refreshPrices = async () => {
+    setIsLoading(true);
+    await updateAllTokenPrices();
+    setPricesUpdated(true);
+    
+    // 触发余额重新计算
+    refreshBalances();
+  };
+
   // 手动刷新所有余额
-  const refreshAllBalances = () => {
+  const refreshAllBalances = async () => {
     if (!address) return;
     
     setIsLoading(true);
+    
+    // 刷新价格数据
+    await updateAllTokenPrices();
+    setPricesUpdated(true);
     
     // 刷新ERC20代币余额
     refetchErc20();
@@ -89,60 +111,31 @@ export function TokenBalances() {
     setLastRefreshTime(new Date());
   };
 
-  // 当区块号变化时，自动刷新余额
-  useEffect(() => {
-    if (blockNumber && address) {
-      refreshAllBalances();
-    }
-  }, [blockNumber, address]);
-
-  useEffect(() => {
-    if (address) {
-      setIsLoading(true)
-      
-      // 初始化新的余额对象
-      const newBalances: {[key: string]: TokenBalance} = {}
-      let newTotalValue = 0
-      
-      // 处理ERC20代币余额
-      if (erc20Data) {
-        erc20Data.forEach((result, index) => {
-          const token = erc20Tokens[index]
-          if (result.status === 'success' && result.result) {
-            const rawBalance = result.result
-            const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals)
-            
-            // 这里可以添加代币价格获取逻辑，目前简化为使用配置的价格
-            const value = formattedBalance * (token.price || 1)
-            
-            if (formattedBalance > 0) {
-              newBalances[token.symbol + '-' + token.chainKey] = {
-                token,
-                balance: formattedBalance,
-                value
-              }
-              newTotalValue += value
-            }
-          }
-        })
-      }
-      
-      // 处理原生代币余额
-      nativeBalances.forEach(({ data, isError, token }) => {
-        if (data && !isError) {
-          const formattedBalance = Number(data.formatted)
-          const value = formattedBalance * token.price
+  // 计算余额和总价值（不获取新数据）
+  const refreshBalances = () => {
+    if (!address) return;
+    
+    // 初始化新的余额对象
+    const newBalances: {[key: string]: TokenBalance} = {}
+    let newTotalValue = 0
+    
+    // 处理ERC20代币余额
+    if (erc20Data) {
+      erc20Data.forEach((result, index) => {
+        const token = erc20Tokens[index]
+        if (result.status === 'success' && result.result) {
+          const rawBalance = result.result
+          const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals)
+          
+          // 获取最新价格
+          const price = getTokenPrice(token.chainKey, token.symbol);
+          const value = formattedBalance * price;
           
           if (formattedBalance > 0) {
             newBalances[token.symbol + '-' + token.chainKey] = {
               token: {
-                symbol: token.symbol,
-                name: token.name,
-                address: 'native',
-                decimals: token.decimals,
-                chainKey: token.chainKey,
-                chainId: token.chainId,
-                price: token.price
+                ...token,
+                price  // 使用最新价格
               },
               balance: formattedBalance,
               value
@@ -151,12 +144,81 @@ export function TokenBalances() {
           }
         }
       })
-      
-      setBalances(newBalances)
-      setTotalValue(newTotalValue)
-      setIsLoading(false)
     }
-  }, [address, erc20Data, nativeBalances])
+    
+    // 处理原生代币余额
+    nativeBalances.forEach(({ data, isError, token }) => {
+      if (data && !isError) {
+        const formattedBalance = Number(data.formatted)
+        // 获取最新价格
+        const price = getNativeCurrencyPrice(token.chainKey);
+        const value = formattedBalance * price;
+        
+        if (formattedBalance > 0) {
+          newBalances[token.symbol + '-' + token.chainKey] = {
+            token: {
+              symbol: token.symbol,
+              name: token.name,
+              address: 'native',
+              decimals: token.decimals,
+              chainKey: token.chainKey,
+              chainId: token.chainId,
+              price  // 使用最新价格
+            },
+            balance: formattedBalance,
+            value
+          }
+          newTotalValue += value
+        }
+      }
+    })
+    
+    setBalances(newBalances)
+    setTotalValue(newTotalValue)
+    setIsLoading(false)
+    
+    if (pricesUpdated) {
+      setPricesUpdated(false);
+    }
+  };
+
+  // 当区块号变化时，自动刷新余额
+  useEffect(() => {
+    if (blockNumber && address) {
+      refreshAllBalances();
+    }
+  }, [blockNumber, address]);
+
+  // 确保一进入组件就立即更新价格
+  useEffect(() => {
+    // 组件首次加载时立即更新价格
+    updateAllTokenPrices().then(() => {
+      if (address) {
+        refreshBalances();
+      }
+    });
+  }, []);
+
+  // 当数据变化时计算余额
+  useEffect(() => {
+    if (address) {
+      setIsLoading(true);
+      refreshBalances();
+    }
+  }, [address, erc20Data, nativeBalances]);
+
+  // 设置自动更新时间显示
+  useEffect(() => {
+    // 初始设置最后更新时间
+    setLastRefreshTime(new Date());
+    
+    // 每30秒更新一次时间
+    const timeUpdateInterval = setInterval(() => {
+      setLastRefreshTime(new Date());
+    }, 30000);
+    
+    return () => clearInterval(timeUpdateInterval);
+  }, []);
 
   // 准备饼图数据
   const pieData = Object.values(balances).map(item => ({
@@ -164,7 +226,8 @@ export function TokenBalances() {
     value: item.value,
     balance: item.balance,
     symbol: item.token.symbol,
-    chainKey: item.token.chainKey
+    chainKey: item.token.chainKey,
+    price: item.token.price
   }))
 
   // 按链分组的余额数据
@@ -181,6 +244,13 @@ export function TokenBalances() {
     return acc
   }, {} as {[key: string]: {tokens: TokenBalance[], totalValue: number}})
 
+  // 当价格数据为0时显示加载中
+  const isPriceLoading = useCallback(() => {
+    // 检查是否有代币价格为0
+    const hasZeroPrice = pieData.some(item => item.price === 0);
+    return hasZeroPrice;
+  }, [pieData]);
+
   if (!address) {
     return <div className="token-balances">请先连接钱包</div>
   }
@@ -188,24 +258,20 @@ export function TokenBalances() {
   return (
     <div className="token-balances">
       <div className="dashboard-header">
-        <h2>资产仪表盘</h2>
+        <h2><span className="dashboard-icon">📊</span> 资产仪表盘</h2>
         <div className="dashboard-actions">
-          <button 
-            className="refresh-button" 
-            onClick={refreshAllBalances}
-            disabled={isLoading || isErc20Pending || nativeBalances.some(b => b.isLoading)}
-          >
-            刷新余额
-          </button>
-          {lastRefreshTime && (
-            <div className="last-refresh">
-              上次更新: {lastRefreshTime.toLocaleTimeString()}
-            </div>
-          )}
           <div className="total-value-card">
             <div className="total-value-label">总资产估值</div>
-            <div className="total-value-amount">${totalValue.toFixed(2)}</div>
+            <div className="total-value-amount">
+              {isPriceLoading() ? '加载中...' : `$${totalValue.toFixed(2)}`}
+            </div>
           </div>
+          {lastRefreshTime && (
+            <div className="update-info">
+              <span className="refresh-indicator"></span>
+              每30秒自动更新 | 上次更新: {lastRefreshTime.toLocaleTimeString()}
+            </div>
+          )}
         </div>
       </div>
       
@@ -247,10 +313,34 @@ export function TokenBalances() {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number, name) => [
-                        `$${value.toFixed(2)} (${(value/totalValue*100).toFixed(2)}%)`, 
-                        name
+                      formatter={(value: number, name: string) => [
+                        `$${value.toFixed(2)}`,
+                        `${name}`
                       ]}
+                      contentStyle={{ 
+                        backgroundColor: '#1a1a1a', 
+                        borderColor: '#333', 
+                        borderRadius: '4px',
+                        padding: '8px'
+                      }}
+                      labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '5px' }}
+                      labelFormatter={(name, props) => {
+                        if (props && props.length > 0 && props[0].payload) {
+                          const { balance, symbol, chainKey, price } = props[0].payload;
+                          return (
+                            <div>
+                              <div>{symbol} ({chainKey})</div>
+                              <div style={{ fontSize: '0.9em', color: '#ccc' }}>
+                                余额: {balance.toFixed(4)} {symbol}
+                              </div>
+                              <div style={{ fontSize: '0.9em', color: '#ccc' }}>
+                                价格: ${price.toFixed(2)}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return name;
+                      }}
                     />
                     <Legend />
                   </PieChart>
@@ -258,65 +348,32 @@ export function TokenBalances() {
               </div>
             </div>
             
-            <div className="summary-card">
-              <h3>链分布</h3>
-              <div className="chain-distribution">
-                {Object.entries(balancesByChain).map(([chainKey, data]) => (
-                  <div key={chainKey} className="chain-item">
-                    <div className="chain-name">{chainKey}</div>
-                    <div className="chain-value">${data.totalValue.toFixed(2)}</div>
-                    <div className="chain-percentage">
-                      {(data.totalValue / totalValue * 100).toFixed(1)}%
+            <div className="asset-list-card">
+              <h3>资产详情</h3>
+              <div className="asset-list">
+                {Object.entries(balancesByChain).map(([chainKey, { tokens, totalValue }]) => (
+                  <div key={chainKey} className="chain-assets">
+                    <div className="chain-header">
+                      <h4>{SUPPORTED_CHAINS.find(c => c.key === chainKey)?.name || chainKey}</h4>
+                      <span className="chain-total">${totalValue.toFixed(2)}</span>
                     </div>
-                    <div className="progress-bar">
-                      <div 
-                        className="progress" 
-                        style={{ 
-                          width: `${(data.totalValue / totalValue * 100)}%`,
-                          backgroundColor: chainKey === 'ethereum' ? '#627EEA' :
-                                          chainKey === 'bsc' ? '#F3BA2F' :
-                                          chainKey === 'polygon' ? '#8247E5' :
-                                          chainKey === 'arbitrum' ? '#28A0F0' :
-                                          chainKey === 'mantle' ? '#FF5F5F' : '#3498db'
-                        }}
-                      ></div>
-                    </div>
+                    <ul className="token-list">
+                      {tokens.map(item => (
+                        <li key={item.token.symbol} className="token-item">
+                          <div className="token-info">
+                            <span className="token-symbol">{item.token.symbol}</span>
+                            <span className="token-balance">{item.balance.toFixed(4)}</span>
+                          </div>
+                          <div className="token-value">
+                            <span className="token-price">${item.token.price.toFixed(2)}</span>
+                            <span className="token-total-value">${item.value.toFixed(2)}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-          
-          <div className="tokens-table-card">
-            <h3>代币详情</h3>
-            <div className="table-container">
-              <table className="tokens-table">
-                <thead>
-                  <tr>
-                    <th>代币</th>
-                    <th>网络</th>
-                    <th>余额</th>
-                    <th>估值 ($)</th>
-                    <th>占比</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pieData.map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div className="token-cell">
-                          <div className="token-color" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                          <span>{item.symbol}</span>
-                        </div>
-                      </td>
-                      <td>{item.chainKey}</td>
-                      <td>{item.balance.toFixed(6)}</td>
-                      <td>${item.value.toFixed(2)}</td>
-                      <td>{(item.value / totalValue * 100).toFixed(2)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         </>

@@ -10,7 +10,8 @@ export interface NetworkConfig {
     name: string;
     symbol: string;
     decimals: number;
-    price: number;
+    price: number; // 将由实时数据更新
+    coingeckoId?: string; // 添加CoinGecko ID
   };
 }
 
@@ -25,21 +26,23 @@ export const SUPPORTED_CHAINS: NetworkConfig[] = [
       name: 'Ethereum',
       symbol: 'ETH',
       decimals: 18,
-      price: 1800 
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'ethereum'
     }
   },
   {
     id: 11155111,
     name: 'Sepolia测试网',
     key: 'sepolia',
-    rpcUrl: 'https://eth-sepolia.g.alchemy.com/v2/demo',
+    rpcUrl: 'https://rpc.sepolia.org',
     blockExplorer: 'https://sepolia.etherscan.io',
     isTestnet: true,
     nativeCurrency: {
       name: 'Sepolia Ether', 
       symbol: 'ETH',
       decimals: 18,
-      price: 1800
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'ethereum'
     }
   },
   {
@@ -52,7 +55,8 @@ export const SUPPORTED_CHAINS: NetworkConfig[] = [
       name: 'BNB',
       symbol: 'BNB',
       decimals: 18,
-      price: 220
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'binancecoin'
     }
   },
   {
@@ -65,7 +69,8 @@ export const SUPPORTED_CHAINS: NetworkConfig[] = [
       name: 'Polygon',
       symbol: 'POL',
       decimals: 18,
-      price: 0.7
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'matic-network'
     }
   },
   {
@@ -78,7 +83,8 @@ export const SUPPORTED_CHAINS: NetworkConfig[] = [
       name: 'Ethereum',
       symbol: 'ETH',
       decimals: 18,
-      price: 1800
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'ethereum'
     }
   },
   {
@@ -91,7 +97,8 @@ export const SUPPORTED_CHAINS: NetworkConfig[] = [
       name: 'Mantle',
       symbol: 'MNT',
       decimals: 18,
-      price: 0.5
+      price: 0, // 初始化为0，将由实时数据更新
+      coingeckoId: 'mantle'
     }
   }
 ]
@@ -104,7 +111,9 @@ export interface TokenInfo {
   decimals: number;
   chainId: number;
   chainKey: string;
-  price: number;
+  price: number;      // 初始化为0，将由实时数据更新
+  coingeckoId?: string; // CoinGecko ID用于获取实时价格
+  lastUpdated?: number; // 最后价格更新时间戳
 }
 
 // 支持的代币
@@ -117,7 +126,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 1,
       chainKey: 'ethereum',
-      price: 1800
+      price: 0,
+      coingeckoId: 'ethereum'
     },
     {
       symbol: 'USDT',
@@ -126,7 +136,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainId: 1,
       chainKey: 'ethereum',
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'USDC',
@@ -135,7 +146,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainId: 1,
       chainKey: 'ethereum',
-      price: 1
+      price: 0,
+      coingeckoId: 'usd-coin'
     },
     {
       symbol: 'DAI',
@@ -144,7 +156,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 1,
       chainKey: 'ethereum',
-      price: 1
+      price: 0,
+      coingeckoId: 'dai'
     }
   ],
   bsc: [
@@ -155,7 +168,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 56,
       chainKey: 'bsc',
-      price: 220
+      price: 0,
+      coingeckoId: 'binancecoin'
     },
     {
       symbol: 'USDT',
@@ -164,7 +178,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainKey: 'bsc',
       chainId: 56,
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'BUSD',
@@ -173,7 +188,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainKey: 'bsc',
       chainId: 56,
-      price: 1
+      price: 0,
+      coingeckoId: 'binance-usd'
     },
     {
       symbol: 'CAKE',
@@ -182,18 +198,20 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainKey: 'bsc',
       chainId: 56,
-      price: 2
+      price: 0,
+      coingeckoId: 'pancakeswap-token'
     }
   ],
   polygon: [
     {
       symbol: 'WPOL',
       name: 'Wrapped Polygon',
-      address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270', // 这是WMATIC地址，如果POL有新的包装代币地址，请更新
+      address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270', 
       decimals: 18,
       chainId: 137,
       chainKey: 'polygon',
-      price: 0.7
+      price: 0,
+      coingeckoId: 'matic-network'
     },
     {
       symbol: 'USDT',
@@ -202,7 +220,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'polygon',
       chainId: 137,
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'USDC',
@@ -211,7 +230,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'polygon',
       chainId: 137,
-      price: 1
+      price: 0,
+      coingeckoId: 'usd-coin'
     },
     {
       symbol: 'USDC.e',
@@ -220,17 +240,19 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'polygon',
       chainId: 137,
-      price: 1
-    },
-    {
-      symbol: 'MATIC',
-      name: 'MATIC Token',
-      address: '0x0000000000000000000000000000000000001010',
-      decimals: 18,
-      chainKey: 'polygon',
-      chainId: 137,
-      price: 0.7
+      price: 0,
+      coingeckoId: 'usd-coin'
     }
+    // {
+    //   symbol: 'MATIC',
+    //   name: 'MATIC Token',
+    //   address: '0x0000000000000000000000000000000000001010',
+    //   decimals: 18,
+    //   chainKey: 'polygon',
+    //   chainId: 137,
+    //   price: 0,
+    //   coingeckoId: 'matic-network'
+    // }
   ],
   arbitrum: [
     {
@@ -240,7 +262,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 42161,
       chainKey: 'arbitrum',
-      price: 1800
+      price: 0,
+      coingeckoId: 'ethereum'
     },
     {
       symbol: 'USDT',
@@ -249,7 +272,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'arbitrum',
       chainId: 42161,
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'USDC',
@@ -258,7 +282,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'arbitrum',
       chainId: 42161,
-      price: 1
+      price: 0,
+      coingeckoId: 'usd-coin'
     },
     {
       symbol: 'ARB',
@@ -267,7 +292,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainKey: 'arbitrum',
       chainId: 42161,
-      price: 1.2
+      price: 0,
+      coingeckoId: 'arbitrum'
     }
   ],
   mantle: [
@@ -278,7 +304,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 5000,
       chainKey: 'mantle',
-      price: 0.5
+      price: 0,
+      coingeckoId: 'mantle'
     },
     {
       symbol: 'USDT',
@@ -287,7 +314,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'mantle',
       chainId: 5000,
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'USDC',
@@ -296,7 +324,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainKey: 'mantle',
       chainId: 5000,
-      price: 1
+      price: 0,
+      coingeckoId: 'usd-coin'
     },
     {
       symbol: 'MNT',
@@ -305,7 +334,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainKey: 'mantle',
       chainId: 5000,
-      price: 0.5
+      price: 0,
+      coingeckoId: 'mantle'
     }
   ],
   // 注释掉测试网代币配置，这些测试币没有实际价值
@@ -318,7 +348,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 11155111,
       chainKey: 'sepolia',
-      price: 1800
+      price: 0,
+      coingeckoId: 'ethereum'
     },
     {
       symbol: 'USDT',
@@ -327,7 +358,8 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 6,
       chainId: 11155111,
       chainKey: 'sepolia',
-      price: 1
+      price: 0,
+      coingeckoId: 'tether'
     },
     {
       symbol: 'IAUSD',
@@ -336,10 +368,149 @@ export const SUPPORTED_TOKENS: { [key: string]: TokenInfo[] } = {
       decimals: 18,
       chainId: 11155111,
       chainKey: 'sepolia',
-      price: 1
+      price: 0
     }
   ]
   */
+}
+
+// 价格缓存对象，用于存储实时价格
+interface PriceCache {
+  [coingeckoId: string]: {
+    price: number;
+    lastUpdated: number;
+  };
+}
+
+const priceCache: PriceCache = {};
+
+// 缓存过期时间（毫秒）
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5分钟
+
+/**
+ * 从CoinGecko API获取代币价格
+ * @param coingeckoIds 要获取价格的代币ID数组
+ * @returns 代币ID到价格的映射
+ */
+export async function fetchTokenPrices(coingeckoIds: string[]): Promise<{[id: string]: number}> {
+  try {
+    // 过滤掉已经有缓存且未过期的ID
+    const now = Date.now();
+    const idsToFetch = coingeckoIds.filter(id => {
+      const cached = priceCache[id];
+      return !cached || (now - cached.lastUpdated > CACHE_EXPIRY);
+    });
+
+    if (idsToFetch.length === 0) {
+      // 所有ID都有缓存，直接返回缓存的价格
+      return coingeckoIds.reduce((prices, id) => {
+        prices[id] = priceCache[id]?.price || 0;
+        return prices;
+      }, {} as {[id: string]: number});
+    }
+
+    // 构建CoinGecko API URL
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${idsToFetch.join(',')}&vs_currencies=usd`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`CoinGecko API请求失败: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // 更新缓存
+    idsToFetch.forEach(id => {
+      if (data[id] && data[id].usd) {
+        priceCache[id] = {
+          price: data[id].usd,
+          lastUpdated: now
+        };
+      }
+    });
+    
+    // 合并缓存和新获取的价格
+    return coingeckoIds.reduce((prices, id) => {
+      prices[id] = priceCache[id]?.price || 0;
+      return prices;
+    }, {} as {[id: string]: number});
+  } catch (error) {
+    console.error('获取代币价格失败:', error);
+    // 出错时返回空对象
+    return {};
+  }
+}
+
+/**
+ * 更新所有支持代币的价格
+ */
+export async function updateAllTokenPrices(): Promise<void> {
+  try {
+    // 收集所有需要更新的coingeckoId
+    const allIds = new Set<string>();
+    
+    // 添加原生货币ID
+    SUPPORTED_CHAINS.forEach(chain => {
+      if (chain.nativeCurrency.coingeckoId) {
+        allIds.add(chain.nativeCurrency.coingeckoId);
+      }
+    });
+    
+    // 添加代币ID
+    Object.values(SUPPORTED_TOKENS).forEach(tokens => {
+      tokens.forEach(token => {
+        if (token.coingeckoId) {
+          allIds.add(token.coingeckoId);
+        }
+      });
+    });
+    
+    const idsArray = Array.from(allIds);
+    const prices = await fetchTokenPrices(idsArray);
+    
+    // 更新原生货币价格
+    SUPPORTED_CHAINS.forEach(chain => {
+      if (chain.nativeCurrency.coingeckoId && prices[chain.nativeCurrency.coingeckoId]) {
+        chain.nativeCurrency.price = prices[chain.nativeCurrency.coingeckoId];
+      }
+    });
+    
+    // 更新代币价格
+    Object.values(SUPPORTED_TOKENS).forEach(tokens => {
+      tokens.forEach(token => {
+        if (token.coingeckoId && prices[token.coingeckoId]) {
+          token.price = prices[token.coingeckoId];
+          token.lastUpdated = Date.now();
+        }
+      });
+    });
+  } catch (error) {
+    console.error('更新所有代币价格失败:', error);
+  }
+}
+
+/**
+ * 获取代币的当前价格
+ * @param chainKey 链标识
+ * @param symbol 代币符号
+ * @returns 代币价格，如果找不到则返回0
+ */
+export function getTokenPrice(chainKey: string, symbol: string): number {
+  const tokens = SUPPORTED_TOKENS[chainKey];
+  if (!tokens) return 0;
+  
+  const token = tokens.find(t => t.symbol === symbol);
+  return token?.price || 0;
+}
+
+/**
+ * 获取原生货币价格
+ * @param chainKey 链标识
+ * @returns 原生货币价格，如果找不到则返回0
+ */
+export function getNativeCurrencyPrice(chainKey: string): number {
+  const chain = SUPPORTED_CHAINS.find(c => c.key === chainKey);
+  return chain?.nativeCurrency.price || 0;
 }
 
 // ERC20代币ABI
