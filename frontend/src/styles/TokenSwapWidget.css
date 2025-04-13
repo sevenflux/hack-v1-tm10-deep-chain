@@ -1,0 +1,316 @@
+.swap-widget-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 95vw;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.swap-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #2d3748;
+  color: white;
+}
+
+.swap-widget-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.close-swap-widget {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.swap-widget-content {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.cross-chain-warning {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 4px;
+}
+
+.cross-chain-warning p {
+  margin: 5px 0;
+  color: #b45309;
+}
+
+.swap-error {
+  background-color: #fef2f2;
+  border-left: 4px solid #ef4444;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 4px;
+  color: #b91c1c;
+}
+
+.swap-details {
+  margin: 16px 0;
+}
+
+.swap-summary {
+  background-color: #f8fafc;
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.swap-summary p {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.swap-assets {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.from-asset, .to-asset {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.arrow {
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+.chain-tag {
+  display: inline-block;
+  font-size: 10px;
+  color: #ffffff;
+  background-color: #64748b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
+/* 对不同链的标签使用不同的颜色 */
+.chain-tag[data-chain="ethereum"] {
+  background-color: #627eea;
+}
+
+.chain-tag[data-chain="polygon"] {
+  background-color: #8247e5;
+}
+
+.chain-tag[data-chain="bsc"] {
+  background-color: #f3ba2f;
+  color: #000000;
+}
+
+.chain-tag[data-chain="arbitrum"] {
+  background-color: #28a0f0;
+}
+
+.chain-tag[data-chain="optimism"] {
+  background-color: #ff0420;
+}
+
+.chain-tag[data-chain="avalanche"] {
+  background-color: #e84142;
+}
+
+.chain-tag[data-chain="mantle"] {
+  background-color: #000000;
+}
+
+.swap-reason {
+  font-style: italic;
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 8px;
+}
+
+/* 交易选项相关样式 */
+.trade-options {
+  margin-top: 20px;
+}
+
+.trade-options h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.trade-option-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.trade-option-card h5 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.trade-option-card p {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.trade-option-button {
+  padding: 8px 16px;
+  background-color: #64748b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.trade-option-button:hover:not(:disabled) {
+  background-color: #475569;
+}
+
+.trade-option-button.primary {
+  background-color: #3b82f6;
+}
+
+.trade-option-button.primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.trade-option-button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.uniswap-widget-container {
+  width: 100%;
+  height: 356px;
+  margin-top: 16px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cross-chain-info {
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.cross-chain-info p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #475569;
+}
+
+.cross-chain-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.cross-chain-info li {
+  margin-bottom: 8px;
+}
+
+.cross-chain-info a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.cross-chain-info a:hover {
+  text-decoration: underline;
+}
+
+.swap-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.execute-swap-button {
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.execute-swap-button:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.execute-swap-button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* 背景遮罩 */
+.swap-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .swap-widget-container {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: none;
+    border-radius: 0;
+  }
+  
+  .swap-widget-content {
+    max-height: none;
+    flex: 1;
+  }
+} 

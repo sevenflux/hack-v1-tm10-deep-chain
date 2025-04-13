@@ -4,7 +4,7 @@ from eth_utils import keccak
 import json
 import logging
 
-from ..schemas.advice import AdviceRequest, AdviceResponse, VerifyTransactionResponse
+from ..schemas.advice import AdviceRequest, ActionResponse, RecommendationData, TradeData, VerifyTransactionResponse
 from ..services.ai_model import generate_investment_advice
 from ..services.blockchain import record_to_blockchain, create_signature, verify_transaction, get_user_requests
 from ..services.ipfs import store_data_to_ipfs, retrieve_data_from_ipfs, check_ipfs_content_availability
@@ -14,14 +14,14 @@ router = APIRouter(prefix="/api", tags=["投资建议"])
 # 配置日志
 logger = logging.getLogger(__name__)
 
-@router.post("/advice", response_model=AdviceResponse)
+@router.post("/advice", response_model=ActionResponse)
 async def get_investment_advice(request: AdviceRequest):
     """
     获取AI投资建议并在区块链上记录存证
     
     处理流程:
     1. 记录请求信息
-    2. 调用AI模型生成建议
+    2. 调用AI模型生成建议或交易方案
     3. 存储数据到IPFS
     4. 创建签名并上链存证
     5. 返回结果给前端
@@ -61,18 +61,46 @@ async def get_investment_advice(request: AdviceRequest):
             signature
         )
         
-        # 构建响应
-        return {
-            "success": True,
-            "data": {
-                "recommendation": recommendation["allocationText"],
-                "allocation": recommendation["allocation"],
-                "cid": cid,
-                "txHash": tx_hash,
-                "signature": signature,
-                "timestamp": timestamp
+        # 构建响应 - 根据操作类型返回不同格式
+        action = recommendation.get("action", "recommend")
+        
+        if action == "recommend":
+            # 投资建议
+            return {
+                "action": "recommend",
+                "success": True,
+                "data": {
+                    "recommendation": recommendation.get("allocationText", ""),
+                    "allocation": recommendation.get("allocation", []),
+                    "cid": cid,
+                    "txHash": tx_hash,
+                    "signature": signature,
+                    "timestamp": timestamp
+                }
             }
-        }
+        elif action == "trade":
+            # 交易执行
+            return {
+                "action": "trade",
+                "success": True,
+                "data": {
+                    "tradeSummary": recommendation.get("tradeSummary", ""),
+                    "trades": recommendation.get("trades", []),
+                    "cid": cid,
+                    "txHash": tx_hash,
+                    "signature": signature,
+                    "timestamp": timestamp
+                }
+            }
+        else:
+            # 未知操作类型
+            return {
+                "action": "unknown",
+                "success": False,
+                "error": "UNKNOWN_ACTION",
+                "message": f"未知的操作类型: {action}"
+            }
+            
     except HTTPException as e:
         # 重新抛出HTTP异常
         raise

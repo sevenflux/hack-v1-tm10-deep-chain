@@ -206,6 +206,119 @@
   font-weight: 500;
 }
 
+/* 区块链标签样式 */
+.chain-tag {
+  display: inline-block;
+  font-size: 10px;
+  color: #ffffff;
+  background-color: #4a5568;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+/* 对不同链的标签使用不同的颜色 */
+.chain-tag[data-chain="ethereum"] {
+  background-color: #627eea;
+}
+
+.chain-tag[data-chain="polygon"] {
+  background-color: #8247e5;
+}
+
+.chain-tag[data-chain="bsc"] {
+  background-color: #f3ba2f;
+}
+
+.chain-tag[data-chain="arbitrum"] {
+  background-color: #12aaff;
+}
+
+.chain-tag[data-chain="optimism"] {
+  background-color: #ff0420;
+}
+
+/* 交易计划样式 */
+.history-trades {
+  margin-top: 10px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.history-trades h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 15px;
+  color: #2d3748;
+}
+
+.trade-item {
+  background-color: #f8fafc;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.trade-item:last-child {
+  margin-bottom: 0;
+}
+
+.trade-item:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.trade-header {
+  margin-bottom: 8px;
+}
+
+.trade-assets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.from-asset, .to-asset {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.arrow {
+  color: #4299e1;
+  font-weight: bold;
+}
+
+.trade-detail {
+  font-size: 13px;
+  color: #4a5568;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trade-amount {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.amount-usd {
+  color: #718096;
+  margin-left: 5px;
+}
+
+.trade-reason {
+  font-style: italic;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .history-item {

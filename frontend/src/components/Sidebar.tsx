@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAccount, useBalance, useReadContracts, useBlockNumber } from 'wagmi'
-import { AdvisorRequestInput, CryptoAsset, apiClient, APIError } from '../api'
+import { AdvisorRequestInput, CryptoAsset, apiClient, APIError, AllocationItem, TradeItem } from '../api'
 import { SUPPORTED_TOKENS, TOKEN_ABI, TokenInfo, SUPPORTED_CHAINS } from '../config/tokens'
 import '../styles/Sidebar.css'
+import { TbAdjustmentsHorizontal } from 'react-icons/tb'
+import { ApiClient } from '../api/apiClient'
+import { TokenSwapWidget } from './TokenSwapWidget'
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,9 +20,10 @@ interface ChatMessage {
   type: MessageType;
   text: string;
   timestamp: number;
-  allocation?: { asset: string; percentage: number }[];
+  allocation?: AllocationItem[];
   cid?: string;
   txHash?: string;
+  trades?: TradeItem[];
 }
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
@@ -45,9 +49,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // 资产相关状态
   const [tokenBalances, setTokenBalances] = useState<{[key: string]: { token: TokenInfo, balance: number, value: number }}>({})
   const [totalValue, setTotalValue] = useState(0)
-  // 用户资产状态
-  const [userAssets, setUserAssets] = useState<TokenInfo[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingBalances, setIsLoadingBalances] = useState(false)
   
   // 过滤掉测试网络，只保留主网
@@ -87,21 +88,113 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     chainKey: chain.key
   }))
   
-  // 为每个链创建useBalance hook
-  const nativeBalances = nativeTokens.map(token => {
-    const { data, refetch } = useBalance({
-      address,
-      chainId: token.chainId,
-      query: {
-        enabled: Boolean(address),
-        refetchInterval: 30000, // 每30秒自动刷新一次
-      }
-    })
-    return { data, refetch, token }
-  })
+  // 直接在组件中为每条链声明余额hooks (不在循环中使用hooks)
+  // 以太坊主网余额
+  const ethMainnetHook = useBalance({
+    address,
+    chainId: 1, // 以太坊主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
   
-  // 刷新所有余额
-  const refreshAllBalances = () => {
+  // BSC主网余额
+  const bscMainnetHook = useBalance({
+    address,
+    chainId: 56, // BSC主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // Polygon主网余额
+  const polygonMainnetHook = useBalance({
+    address,
+    chainId: 137, // Polygon主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // Arbitrum主网余额
+  const arbitrumMainnetHook = useBalance({
+    address,
+    chainId: 42161, // Arbitrum主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // 构建原生代币余额数组的引用
+  const nativeBalancesRef = useRef<any[]>([]);
+  
+  // 初始化余额引用
+  useEffect(() => {
+    // 构建原生代币余额数组
+    nativeBalancesRef.current = [
+      {
+        data: ethMainnetHook.data,
+        refetch: ethMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 1) || {
+          chainId: 1,
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+          price: 1,
+          chainKey: 'ethereum'
+        }
+      },
+      {
+        data: bscMainnetHook.data,
+        refetch: bscMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 56) || {
+          chainId: 56,
+          symbol: 'BNB',
+          name: 'Binance Coin',
+          decimals: 18,
+          price: 1,
+          chainKey: 'bsc'
+        }
+      },
+      {
+        data: polygonMainnetHook.data,
+        refetch: polygonMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 137) || {
+          chainId: 137,
+          symbol: 'MATIC',
+          name: 'Polygon',
+          decimals: 18,
+          price: 1,
+          chainKey: 'polygon'
+        }
+      },
+      {
+        data: arbitrumMainnetHook.data,
+        refetch: arbitrumMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 42161) || {
+          chainId: 42161,
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+          price: 1,
+          chainKey: 'arbitrum'
+        }
+      }
+    ];
+  }, [
+    ethMainnetHook.data, ethMainnetHook.refetch,
+    bscMainnetHook.data, bscMainnetHook.refetch,
+    polygonMainnetHook.data, polygonMainnetHook.refetch,
+    arbitrumMainnetHook.data, arbitrumMainnetHook.refetch,
+    nativeTokens
+  ]);
+  
+  // 刷新所有余额的函数
+  const refreshAllBalances = useCallback(() => {
     if (!address) return;
     
     setIsLoadingBalances(true);
@@ -110,109 +203,153 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     refetchErc20();
     
     // 刷新所有原生代币余额
-    nativeBalances.forEach(({ refetch }) => refetch());
-  };
+    nativeBalancesRef.current.forEach(item => {
+      if (item && typeof item.refetch === 'function') {
+        item.refetch();
+      }
+    });
+  }, [address, refetchErc20]);
   
   // 当区块号变化时，自动刷新余额
   useEffect(() => {
     if (blockNumber && address) {
       refreshAllBalances();
     }
-  }, [blockNumber, address]);
+  }, [blockNumber, address, refreshAllBalances]);
   
   // 处理余额数据变化
   useEffect(() => {
-    if (address) {
-      setIsLoadingBalances(true)
-      
-      // 初始化新的余额对象
-      const newBalances: {[key: string]: { token: TokenInfo, balance: number, value: number }} = {}
-      let newTotalValue = 0
-      
-      // 处理ERC20代币余额
-      if (erc20Data) {
-        erc20Data.forEach((result, index) => {
-          const token = erc20Tokens[index]
-          if (result.status === 'success' && result.result) {
-            const rawBalance = result.result
-            const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals)
-            
-            // 使用配置的价格
-            const value = formattedBalance * (token.price || 1)
-            
-            if (formattedBalance > 0) {
-              newBalances[token.symbol + '-' + token.chainKey] = {
-                token,
-                balance: formattedBalance,
-                value
-              }
-              newTotalValue += value
-            }
-          }
-        })
-      }
-      
-      // 处理原生代币余额
-      nativeBalances.forEach(({ data, token }) => {
-        if (data) {
-          const formattedBalance = Number(data.formatted)
-          const value = formattedBalance * token.price
+    if (!address) return;
+    
+    setIsLoadingBalances(true);
+    
+    // 初始化新的余额对象
+    const newBalances: {[key: string]: { token: TokenInfo, balance: number, value: number }} = {};
+    let newTotalValue = 0;
+    
+    // 处理ERC20代币余额
+    if (erc20Data) {
+      erc20Data.forEach((result, index) => {
+        if (index >= erc20Tokens.length) return; // 安全检查
+        
+        const token = erc20Tokens[index];
+        if (result.status === 'success' && result.result) {
+          const rawBalance = result.result;
+          const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals);
+          
+          // 使用配置的价格
+          const value = formattedBalance * (token.price || 1);
           
           if (formattedBalance > 0) {
             newBalances[token.symbol + '-' + token.chainKey] = {
-              token: {
-                symbol: token.symbol,
-                name: token.name,
-                address: 'native',
-                decimals: token.decimals,
-                chainKey: token.chainKey,
-                chainId: token.chainId,
-                price: token.price
-              },
+              token,
               balance: formattedBalance,
               value
-            }
-            newTotalValue += value
+            };
+            newTotalValue += value;
           }
         }
-      })
-      
-      setTokenBalances(newBalances)
-      setTotalValue(newTotalValue)
-      setIsLoadingBalances(false)
+      });
     }
-  }, [address, erc20Data, nativeBalances])
+    
+    // 处理原生代币余额
+    nativeBalancesRef.current.forEach(({ data, token }) => {
+      if (data) {
+        const formattedBalance = Number(data.formatted);
+        const value = formattedBalance * (token.price || 0);
+        
+        if (formattedBalance > 0) {
+          newBalances[token.symbol + '-' + token.chainKey] = {
+            token: {
+              symbol: token.symbol,
+              name: token.name,
+              address: 'native',
+              decimals: token.decimals,
+              chainKey: token.chainKey,
+              chainId: token.chainId,
+              price: token.price
+            },
+            balance: formattedBalance,
+            value
+          };
+          newTotalValue += value;
+        }
+      }
+    });
+    
+    setTokenBalances(newBalances);
+    setTotalValue(newTotalValue);
+    setIsLoadingBalances(false);
+  }, [
+    address, 
+    erc20Data, 
+    erc20Tokens, 
+    ethMainnetHook.data,
+    bscMainnetHook.data,
+    polygonMainnetHook.data,
+    arbitrumMainnetHook.data
+  ]);
   
   // 转换为API所需的CryptoAsset格式
-  const calculateAssetDistribution = (): CryptoAsset[] => {
-    // 对象为空时返回默认值
+  const calculateAssetDistribution = useCallback((): CryptoAsset[] => {
+    const assets: CryptoAsset[] = [];
+    
+    // 如果没有令牌余额数据，返回默认资产数据
     if (Object.keys(tokenBalances).length === 0) {
       return [
-        { symbol: 'ETH', percentage: 50 },
-        { symbol: 'USDC', percentage: 30 },
-        { symbol: 'BTC', percentage: 20 }
+        { symbol: 'ETH', percentage: 60, chain: 'ethereum', amount: 0 },
+        { symbol: 'USDC', percentage: 40, chain: 'ethereum', amount: 0 }
       ];
     }
     
-    const assets: CryptoAsset[] = Object.values(tokenBalances).map(item => ({
-      symbol: item.token.symbol,
-      percentage: totalValue > 0 ? Math.round((item.value / totalValue) * 100) : 0
-    }));
+    // 计算资产分布
+    Object.values(tokenBalances).forEach(item => {
+      // 跳过零余额
+      if (item.value === 0) return;
+      
+      // 计算百分比
+      const percentage = (item.value / totalValue) * 100;
+      
+      // 如果百分比太小 (小于0.1%)，则跳过
+      if (percentage < 0.1) return;
+      
+      assets.push({
+        symbol: item.token.symbol,
+        percentage: Number(percentage.toFixed(1)),
+        chain: item.token.chainId ? SUPPORTED_CHAINS.find(c => c.id === item.token.chainId)?.key || 'ethereum' : 'ethereum',
+        amount: item.balance,
+        price: item.value / item.balance // 计算单价
+      });
+    });
+    
+    // 如果没有资产，返回默认资产
+    if (assets.length === 0) {
+      return [
+        { symbol: 'ETH', percentage: 100, chain: 'ethereum', amount: 0 }
+      ];
+    }
     
     // 确保百分比总和为100%
     const totalPercentage = assets.reduce((sum, asset) => sum + asset.percentage, 0);
-    if (totalPercentage !== 100 && totalPercentage > 0) {
-      // 将差值加到最大的资产上或第一个资产上
-      const maxAsset = assets.reduce((prev, current) => 
-        prev.percentage > current.percentage ? prev : current, 
-        assets[0]
-      );
+    
+    if (totalPercentage < 99.9 || totalPercentage > 100.1) {
+      // 找到最大资产进行调整
+      const maxAsset = assets.reduce((max, asset) => 
+        asset.percentage > max.percentage ? asset : max, assets[0]);
+      
+      // 调整百分比使总和为100%
       maxAsset.percentage += (100 - totalPercentage);
     }
     
     return assets;
-  };
+  }, [tokenBalances, totalValue]);
   
+  // 添加新状态用于交易处理
+  const [showSwapWidget, setShowSwapWidget] = useState(false)
+  const [selectedTrade, setSelectedTrade] = useState<TradeItem | null>(null)
+  const [showOverlay, setShowOverlay] = useState(false)
+  
+  // 发送消息处理
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isProcessing) return;
@@ -221,7 +358,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     
     // 添加用户消息到聊天记录
     setChatHistory(prev => [...prev, {
-      type: 'user',
+      type: 'user', 
       text: message,
       timestamp: Date.now()
     }]);
@@ -248,7 +385,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         requestInput.riskLevel === 'low' ? '低' : 
         requestInput.riskLevel === 'medium' ? '中' : '高'
       }，总资产价值-${requestInput.amount}美元，当前加密货币资产分布：${
-        requestInput.cryptoAssets.map(asset => `${asset.symbol}: ${asset.percentage}%`).join(', ')
+        requestInput.cryptoAssets.map(asset => 
+          `${asset.symbol}: ${asset.percentage}% (${asset.chain}${asset.amount ? `, 数量: ${asset.amount.toFixed(4)}` : ''})`
+        ).join(', ')
       }`,
       timestamp: Date.now()
     }]);
@@ -267,16 +406,34 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     try {
       const response = await apiClient.getAdvice(address, requestInput);
       
-      // 更新聊天历史
-      setChatHistory(prev => [...prev, {
-        type: 'ai',
-        text: response.data?.recommendation || '无法获取建议',
-        timestamp: Date.now(),
-        allocation: response.data?.allocation,
-        txHash: response.data?.txHash,
-        cid: response.data?.cid
-      }]);
-      
+      if (response.action === 'trade' && response.data?.trades) {
+        // 处理交易执行响应
+        const trades = response.data.trades;
+        
+        setChatHistory(prev => [...prev, {
+          type: 'ai',
+          text: response.data?.tradeSummary || response.data?.recommendation || '无法获取交易建议',
+          timestamp: Date.now(),
+          trades: trades,
+          txHash: response.data?.txHash,
+          cid: response.data?.cid
+        }]);
+        
+        // 如果只有一个交易，可以自动显示交易界面
+        if (trades.length === 1) {
+          handleTradeClick(trades[0]);
+        }
+      } else {
+        // 处理投资建议响应
+        setChatHistory(prev => [...prev, {
+          type: 'ai',
+          text: response.data?.recommendation || '无法获取建议',
+          timestamp: Date.now(),
+          allocation: response.data?.allocation,
+          txHash: response.data?.txHash,
+          cid: response.data?.cid
+        }]);
+      }
     } catch (error) {
       let errorMessage = '获取投资建议时出错，请稍后再试。';
       
@@ -292,10 +449,44 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     } finally {
       setIsProcessing(false);
     }
-  }
+  };
   
+  // 处理交易点击事件
+  const handleTradeClick = useCallback((trade: TradeItem) => {
+    setSelectedTrade(trade);
+    setShowSwapWidget(true);
+    setShowOverlay(true);
+  }, []);
+
+  // 关闭交易窗口
+  const handleCloseSwapWidget = useCallback(() => {
+    setShowSwapWidget(false);
+    setSelectedTrade(null);
+    setShowOverlay(false);
+  }, []);
+
+  // 处理交易完成事件
+  const handleTradeComplete = useCallback((success: boolean) => {
+    if (success) {
+      setChatHistory(prev => [...prev, {
+        type: 'system',
+        text: '✅ 交易执行成功！',
+        timestamp: Date.now()
+      }]);
+    } else {
+      setChatHistory(prev => [...prev, {
+        type: 'system',
+        text: '❌ 交易执行失败，请重试。',
+        timestamp: Date.now()
+      }]);
+    }
+    
+    // 关闭交易窗口
+    handleCloseSwapWidget();
+  }, [handleCloseSwapWidget]);
+
   // 渲染资产分配建议
-  const renderAllocation = (allocation: { asset: string; percentage: number }[]) => {
+  const renderAllocation = useCallback((allocation: AllocationItem[]) => {
     return (
       <div className="allocation-container">
         <h4>推荐资产分配</h4>
@@ -305,6 +496,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               <div className="allocation-label">
                 <span className="asset-name">{item.asset}</span>
                 <span className="asset-percentage">{item.percentage}%</span>
+              </div>
+              <div className="allocation-detail">
+                {item.chain && <span className="asset-chain" data-chain={item.chain}>{item.chain}</span>}
               </div>
               <div className="allocation-bar">
                 <div 
@@ -320,7 +514,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
       </div>
     );
-  }
+  }, []);
   
   // 为不同资产分配不同颜色
   const getAssetColor = (asset: string) => {
@@ -336,7 +530,40 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     };
     
     return colorMap[asset] || '#888888'; // 默认颜色
-  }
+  };
+  
+  // 渲染交易项
+  const renderTradeItem = useCallback((trade: TradeItem) => {
+    return (
+      <div className="trade-item" onClick={() => handleTradeClick(trade)}>
+        <div className="trade-header">
+          <div className="trade-assets">
+            <span className="from-asset">
+              {trade.fromAsset}
+              <span className="asset-chain" data-chain={trade.fromChain}>{trade.fromChain}</span>
+            </span>
+            <span className="arrow">→</span>
+            <span className="to-asset">
+              {trade.toAsset}
+              <span className="asset-chain" data-chain={trade.toChain}>{trade.toChain}</span>
+            </span>
+          </div>
+        </div>
+        <div className="trade-detail">
+          <div className="trade-amount">
+            <strong>数量:</strong> {trade.amount} {trade.fromAsset}
+            {trade.amountInUSD && <span className="amount-usd">(约 ${trade.amountInUSD.toFixed(2)})</span>}
+          </div>
+          {trade.reason && (
+            <div className="trade-reason">
+              <strong>原因:</strong> {trade.reason}
+            </div>
+          )}
+        </div>
+        <div className="execute-trade">点击执行</div>
+      </div>
+    );
+  }, [handleTradeClick]);
   
   // 当侧边栏打开时，滚动到最新消息
   useEffect(() => {
@@ -349,9 +576,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   }, [isOpen, chatHistory]);
   
   // 切换风险选择器的显示/隐藏
-  const toggleRiskSelector = () => {
-    setShowRiskSelector(!showRiskSelector);
-  }
+  const toggleRiskSelector = useCallback(() => {
+    setShowRiskSelector(prev => !prev);
+  }, []);
   
   return (
     <>
@@ -383,6 +610,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               <div key={index} className={`chat-message ${msg.type}`}>
                 <div className="message-content">{msg.text}</div>
                 {msg.allocation && renderAllocation(msg.allocation)}
+                {msg.trades && (
+                  <div className="trades-container">
+                    <h4>交易计划</h4>
+                    <div className="trades-list">
+                      {msg.trades.map((trade, i) => (
+                        <div key={i}>{renderTradeItem(trade)}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {msg.cid && msg.txHash && (
                   <div className="message-metadata">
                     <a 
@@ -513,6 +750,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           )}
         </div>
       </div>
+      
+      {/* 添加交易组件和背景遮罩 */}
+      {showOverlay && <div className="swap-overlay" onClick={handleCloseSwapWidget}></div>}
+      {showSwapWidget && selectedTrade && (
+        <TokenSwapWidget 
+          trade={selectedTrade} 
+          onComplete={handleTradeComplete} 
+          onClose={handleCloseSwapWidget} 
+        />
+      )}
     </>
-  )
+  );
 } 

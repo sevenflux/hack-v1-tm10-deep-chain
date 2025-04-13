@@ -4,20 +4,24 @@ import { ethers } from 'ethers';
 export interface CryptoAsset {
   symbol: string;     // 加密货币符号：BTC, ETH, USDC等
   percentage: number; // 持有百分比 (0-100)
+  chain?: string;     // 资产所在的区块链网络
+  amount?: number;    // 用户持有的实际数量
+  price?: number;     // 当前资产单价(USD)
 }
 
 // AI投顾请求参数接口
 export interface AdvisorRequestInput {
   riskLevel: 'low' | 'medium' | 'high'; // 风险承受能力
-  amount: number;                      // 投资金额
-  cryptoAssets: CryptoAsset[];         // 当前持有的加密货币资产比例
+  amount: number;                      // 资产总价值(USD)，原来的参数名保持不变，但含义已更改
+  cryptoAssets: CryptoAsset[];         // 当前持有的加密货币资产详情
   userMessage?: string;                // 用户的其他需求描述或投资偏好
 }
 
 // AI建议项
 export interface AllocationItem {
-  asset: string;     // 资产名称
+  asset: string;      // 资产名称
   percentage: number; // 配置百分比
+  chain?: string;     // 推荐的区块链网络
 }
 
 // API请求体
@@ -30,13 +34,17 @@ export interface AdviceRequestBody {
 // AI响应结果接口
 export interface AdvisorResponse {
   success: boolean;
+  action?: 'recommend' | 'trade'; // 操作类型
   data?: {
-    recommendation: string;    // 简短建议文本
+    recommendation: string;    // 简短建议文本或交易摘要
     allocation: AllocationItem[]; // 具体资产配置
     cid: string;               // IPFS内容ID
     txHash: string;            // 区块链交易哈希
     signature: string;         // 后端签名
     timestamp: number;         // 签名时间戳
+    // 交易相关字段(仅当action='trade'时有效)
+    trades?: TradeItem[];      // 交易详情列表
+    tradeSummary?: string;     // 交易方案总结
   };
   error?: string;
   message?: string;
@@ -68,14 +76,28 @@ export interface VerifyResponse {
   error?: string;
 }
 
+// 交易项
+export interface TradeItem {
+  fromAsset: string;      // 源资产名称
+  fromChain?: string;     // 源资产所在链
+  toAsset: string;        // 目标资产名称
+  toChain?: string;       // 目标资产所在链
+  amount: number;         // 交易数量
+  amountInUSD?: number;   // 美元价值
+  reason?: string;        // 交易原因
+}
+
 // IPFS存储的完整数据格式
 export interface IPFSStorageData {
   input: AdvisorRequestInput;
   output: {
     modelVersion: string;
     timestamp: number;
-    allocation: AllocationItem[];
-    allocationText: string;
+    action: 'recommend' | 'trade';
+    allocation?: AllocationItem[];
+    allocationText?: string;
+    trades?: TradeItem[];
+    tradeSummary?: string;
   };
   timestamp: number;
 }
@@ -89,6 +111,7 @@ export interface BlockchainRequest {
   details?: {
     recommendation?: string;
     allocation?: AllocationItem[];
+    trades?: TradeItem[];       // 交易详情(当action为trade时)
   };
 }
 

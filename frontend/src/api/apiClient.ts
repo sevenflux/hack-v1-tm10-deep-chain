@@ -24,7 +24,7 @@ export class ApiClient {
    * 获取AI投资建议
    * @param userAddress 用户地址
    * @param input 投资请求参数
-   * @returns 投资建议响应
+   * @returns 投资建议或交易执行响应
    */
   async getAdvice(userAddress: string, input: AdvisorRequestInput): Promise<AdvisorResponse> {
     try {
@@ -52,7 +52,43 @@ export class ApiClient {
         );
       }
       
-      return await response.json();
+      const result = await response.json();
+      
+      // 处理不同的响应类型
+      const action = result.action || 'recommend';
+      const data = result.data || {};
+      
+      // 根据操作类型将响应映射回前端所需的结构
+      if (action === 'recommend') {
+        return {
+          success: result.success,
+          data: {
+            recommendation: data.recommendation || '',
+            allocation: data.allocation || [],
+            cid: data.cid,
+            txHash: data.txHash,
+            signature: data.signature,
+            timestamp: data.timestamp
+          }
+        };
+      } else if (action === 'trade') {
+        return {
+          success: result.success,
+          action: 'trade',
+          data: {
+            recommendation: data.tradeSummary || '', // 使用tradeSummary作为recommendation显示
+            allocation: [], // 保持空数组，可能在后续处理中转换
+            trades: data.trades || [],
+            tradeSummary: data.tradeSummary || '',
+            cid: data.cid,
+            txHash: data.txHash,
+            signature: data.signature,
+            timestamp: data.timestamp
+          }
+        };
+      }
+      
+      return result;
     } catch (error) {
       if (error instanceof APIError) {
         throw error;
@@ -74,23 +110,33 @@ export class ApiClient {
    */
   async getIpfsData(cid: string): Promise<IPFSStorageData | null> {
     try {
-      // 优先尝试使用后端API获取
+      // 先尝试直接从IPFS网关获取
+      try {
+        console.log('尝试直接从IPFS网关获取数据:', `${IPFS_GATEWAY}/${cid}`);
+        const ipfsResponse = await fetch(`${IPFS_GATEWAY}/${cid}`);
+        
+        if (ipfsResponse.ok) {
+          const data = await ipfsResponse.json();
+          console.log('从IPFS网关获取数据成功');
+          return data;
+        } else {
+          console.log(`从IPFS网关获取失败，状态码: ${ipfsResponse.status}`);
+        }
+      } catch (ipfsError) {
+        console.error('直接从IPFS网关获取数据失败:', ipfsError);
+      }
+      
+      // 如果从IPFS网关获取失败，再尝试使用后端API获取
+      console.log('从后端API获取IPFS数据:', `${API_BASE_URL}/api/ipfs/${cid}`);
       const response = await fetch(`${API_BASE_URL}/api/ipfs/${cid}`);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('从后端API获取IPFS数据成功');
         return result.data;
       }
       
-      // 如果后端获取失败，直接从IPFS网关获取
-      console.log('通过后端获取IPFS数据失败，尝试直接从网关获取');
-      const ipfsResponse = await fetch(`${IPFS_GATEWAY}/${cid}`);
-      
-      if (!ipfsResponse.ok) {
-        throw new Error(`IPFS请求失败: ${ipfsResponse.status}`);
-      }
-      
-      return await ipfsResponse.json();
+      throw new Error(`无法获取IPFS数据，CID: ${cid}`);
     } catch (error) {
       console.error('IPFS数据获取失败:', error);
       return null;

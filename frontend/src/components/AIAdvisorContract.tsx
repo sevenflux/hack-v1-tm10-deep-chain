@@ -7,7 +7,7 @@ import {
   apiClient, 
   getEtherscanLink
 } from '../api'
-import { BlockchainRequest } from '../api/types'
+import { BlockchainRequest, TradeItem } from '../api/types'
 import '../styles/AIAdvisorContract.css'
 
 // 从环境变量获取合约地址
@@ -87,14 +87,34 @@ export function AIAdvisorContract() {
         try {
           const ipfsData = await apiClient.getIpfsData(req.cid)
           if (ipfsData && ipfsData.output) {
+            let recommendation = '';
+            let allocation = undefined;
+            let trades = undefined;
+            
+            // 根据输出类型处理数据
+            if (ipfsData.output.action === 'recommend') {
+              recommendation = ipfsData.output.allocationText || '';
+              allocation = ipfsData.output.allocation || [];
+            } else if (ipfsData.output.action === 'trade') {
+              recommendation = ipfsData.output.tradeSummary || '';
+              trades = ipfsData.output.trades;
+              
+              // 如果需要，还可以将交易转换为分配格式以便显示
+              if (!allocation && trades && trades.length > 0) {
+                allocation = trades.map(trade => ({
+                  asset: `${trade.fromAsset} → ${trade.toAsset}`,
+                  percentage: 100 / trades.length, // 平均分配百分比
+                  chain: `${trade.fromChain} → ${trade.toChain}`
+                }));
+              }
+            }
+            
             updatedHistory[index] = {
               ...updatedHistory[index],
               details: {
-                recommendation: ipfsData.output.allocationText || 
-                  ipfsData.output.allocation
-                    .map(item => `${item.asset}: ${item.percentage}%`)
-                    .join(', '),
-                allocation: ipfsData.output.allocation
+                recommendation,
+                allocation,
+                trades
               }
             }
           }
@@ -113,6 +133,44 @@ export function AIAdvisorContract() {
     refetch();
     // 同时也尝试通过API获取
     fetchHistoryFromApi();
+  }
+  
+  /**
+   * 处理新请求
+   * @param requestHash 请求哈希
+   * @param txHash 交易哈希
+   */
+  const handleNewRequest = async (requestHash: string, txHash: string) => {
+    try {
+      // 确保用户已连接
+      if (!isConnected || !address) {
+        alert('请先连接钱包');
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      // 如果有交易哈希，可以打开区块链浏览器查看交易
+      if (txHash) {
+        const etherscanLink = getEtherscanLink(txHash);
+        const result = confirm(
+          `请求已提交到区块链，交易哈希: ${txHash}\n\n` +
+          `点击确定在Etherscan上查看交易详情`
+        );
+        
+        if (result) {
+          window.open(etherscanLink, '_blank');
+        }
+      }
+      
+      // 刷新历史记录
+      await refreshHistory();
+    } catch (error) {
+      console.error('处理新请求时出错:', error);
+      alert('处理请求时发生错误');
+    } finally {
+      setIsLoading(false);
+    }
   }
   
   const formatDate = (timestamp: number) => {
@@ -155,6 +213,38 @@ export function AIAdvisorContract() {
     }
   }
   
+  // 渲染单个交易详情
+  const renderTradeItem = (trade: TradeItem) => {
+    return (
+      <div className="trade-item">
+        <div className="trade-header">
+          <div className="trade-assets">
+            <span className="from-asset">
+              {trade.fromAsset}
+              {trade.fromChain && <span className="chain-tag" data-chain={trade.fromChain}>{trade.fromChain}</span>}
+            </span>
+            <span className="arrow">→</span>
+            <span className="to-asset">
+              {trade.toAsset}
+              {trade.toChain && <span className="chain-tag" data-chain={trade.toChain}>{trade.toChain}</span>}
+            </span>
+          </div>
+        </div>
+        <div className="trade-detail">
+          <div className="trade-amount">
+            数量: <strong>{trade.amount}</strong> {trade.fromAsset}
+            {trade.amountInUSD && <span className="amount-usd">(约 ${trade.amountInUSD.toFixed(2)})</span>}
+          </div>
+          {trade.reason && (
+            <div className="trade-reason">
+              原因: {trade.reason}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // 渲染请求历史
   const renderHistory = () => {
     if (isError) {
@@ -180,11 +270,22 @@ export function AIAdvisorContract() {
               <div className="history-details">
                 <div className="history-recommendation">{item.details.recommendation}</div>
                 
-                {item.details.allocation && (
+                {/* 判断是投资建议还是交易执行 */}
+                {item.details.trades && item.details.trades.length > 0 ? (
+                  <div className="trades-list history-trades">
+                    <h4>交易计划</h4>
+                    {item.details.trades.map((trade, i) => (
+                      <div key={i}>{renderTradeItem(trade)}</div>
+                    ))}
+                  </div>
+                ) : item.details.allocation && (
                   <div className="mini-allocation-chart">
                     {item.details.allocation.map((alloc, i) => (
                       <div key={i} className="mini-allocation-item">
-                        <div className="mini-allocation-label">{alloc.asset}</div>
+                        <div className="mini-allocation-label">
+                          {alloc.asset}
+                          {alloc.chain && <span className="chain-tag" data-chain={alloc.chain}>{alloc.chain}</span>}
+                        </div>
                         <div className="mini-allocation-bar-container">
                           <div 
                             className="mini-allocation-bar" 
