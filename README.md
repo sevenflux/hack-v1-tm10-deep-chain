@@ -2,7 +2,7 @@
 
 # ✨F𝕚Mind — 去中心化AI智能投顾
 
-![cover](E:\deepChain\hack-v1-tm10-deep-chain\frontend\src\assets\cover.jpg)
+![cover](frontend\src\assets\cover.jpg)
 
 
 ## ⭐️项目概览  Project Overview 
