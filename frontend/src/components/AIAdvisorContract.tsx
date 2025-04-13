@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useReadContract, useWriteContract } from 'wagmi'
+import { useAccount, useReadContract } from 'wagmi'
 import { Address } from 'viem'
 import { 
   AI_CONTRACT_ADDRESS, 
   AI_CONTRACT_ABI, 
   aiApi, 
-  AdvisorResponse,
   getEtherscanLink
 } from '../api'
 import { BlockchainRequest } from '../api/types'
@@ -17,10 +16,7 @@ const CONTRACT_ADDRESS = AI_CONTRACT_ADDRESS;
 export function AIAdvisorContract() {
   const { address, isConnected } = useAccount()
   const [isLoading, setIsLoading] = useState(false)
-  const { writeContractAsync } = useWriteContract()
   const [history, setHistory] = useState<BlockchainRequest[]>([])
-  
-  // 查询用户历史请求
   const { data: userRequests, isError, refetch } = useReadContract({
     address: CONTRACT_ADDRESS as Address,
     abi: AI_CONTRACT_ABI,
@@ -127,11 +123,27 @@ export function AIAdvisorContract() {
     try {
       setIsLoading(true)
       
+      // 告知用户这不是直接的交易哈希
+      alert(`正在验证请求ID: ${requestHash}\n\n请注意: 这是请求的唯一标识符，不是实际的交易哈希。系统将尝试查找与此请求关联的交易。`);
+      
       // 使用API验证交易
       const verification = await aiApi.verifyTransaction(requestHash)
       
       if (verification.success && verification.data) {
-        alert(`交易已验证: 在区块 ${verification.data.blockNumber} 成功确认`)
+        // 显示成功信息并提供真实的交易哈希链接
+        const txHash = verification.data.hash;
+        const blockNumber = verification.data.blockNumber;
+        const etherscanLink = getEtherscanLink(txHash);
+        
+        const result = confirm(
+          `交易已验证: 在区块 ${blockNumber} 成功确认\n\n` +
+          `交易哈希: ${txHash}\n\n` +
+          `点击确定查看Etherscan上的交易详情`
+        );
+        
+        if (result) {
+          window.open(etherscanLink, '_blank');
+        }
       } else {
         alert(`验证失败: ${verification.error || '未知错误'}`)
       }
@@ -140,35 +152,6 @@ export function AIAdvisorContract() {
       alert('验证交易时发生错误，请稍后重试')
     } finally {
       setIsLoading(false)
-    }
-  }
-  
-  // 处理新请求
-  const handleNewRequest = async (requestData: AdvisorResponse) => {
-    if (!isConnected || !address) {
-      alert('请先连接您的钱包');
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      if (requestData.success && requestData.data && requestData.data.txHash) {
-        // 打开Etherscan链接查看交易
-        window.open(getEtherscanLink(requestData.data.txHash), '_blank');
-        
-        // 刷新请求历史
-        setTimeout(() => {
-          refreshHistory();
-        }, 5000); // 5秒后刷新，给交易一些确认时间
-      } else {
-        throw new Error(requestData.error || '请求失败');
-      }
-    } catch (error) {
-      console.error('处理新请求时出错:', error);
-      alert(`处理请求时出错: ${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setIsLoading(false);
     }
   }
   
@@ -227,20 +210,22 @@ export function AIAdvisorContract() {
               >
                 查看IPFS数据
               </a>
-              <a 
-                href={getEtherscanLink(item.requestHash)} 
-                target="_blank"
-                rel="noopener noreferrer"
+              <button 
+                onClick={() => {
+                  // 复制请求哈希到剪贴板
+                  navigator.clipboard.writeText(item.requestHash);
+                  alert('请求ID已复制到剪贴板');
+                }}
                 className="history-link"
               >
-                查看交易
-              </a>
+                复制请求ID
+              </button>
               <button 
                 onClick={() => verifyTransaction(item.requestHash)}
                 className="history-link verify-button"
                 disabled={isLoading}
               >
-                区块链验证
+                查找交易详情
               </button>
             </div>
           </div>

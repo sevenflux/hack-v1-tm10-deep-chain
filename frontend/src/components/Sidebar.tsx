@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAccount, useBalance, useReadContracts, useBlockNumber } from 'wagmi'
-import { AdvisorRequestInput, AllocationItem, CryptoAsset, aiApi, APIError } from '../api'
+import { AdvisorRequestInput, CryptoAsset, aiApi, APIError } from '../api'
 import { SUPPORTED_TOKENS, TOKEN_ABI, TokenInfo, SUPPORTED_CHAINS } from '../config/tokens'
 import '../styles/Sidebar.css'
 
@@ -45,6 +45,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // 资产相关状态
   const [tokenBalances, setTokenBalances] = useState<{[key: string]: { token: TokenInfo, balance: number, value: number }}>({})
   const [totalValue, setTotalValue] = useState(0)
+  // 用户资产状态
+  const [userAssets, setUserAssets] = useState<TokenInfo[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingBalances, setIsLoadingBalances] = useState(false)
   
   // 过滤掉测试网络，只保留主网
@@ -223,6 +226,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       timestamp: Date.now()
     }]);
     
+    // 未使用的变量，用于备份原始消息内容
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const userInput = message;
     setMessage('');
     
