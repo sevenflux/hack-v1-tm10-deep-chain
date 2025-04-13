@@ -11,6 +11,7 @@ export interface AdvisorRequestInput {
   riskLevel: 'low' | 'medium' | 'high'; // 风险承受能力
   amount: number;                      // 投资金额
   cryptoAssets: CryptoAsset[];         // 当前持有的加密货币资产比例
+  userMessage?: string;                // 用户的其他需求描述或投资偏好
 }
 
 // AI建议项

@@ -11,6 +11,7 @@ class InputData(BaseModel):
     riskLevel: str = Field(..., description="风险等级: low, medium, high")
     amount: float = Field(..., description="投资金额")
     cryptoAssets: List[CryptoAsset] = Field(..., description="用户当前持有的加密货币资产比例")
+    userMessage: Optional[str] = Field(None, description="用户的其他需求描述或投资偏好")
 
 
 class AllocationItem(BaseModel):

@@ -33,7 +33,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {
       type: 'ai', 
-      text: '你好！我是你的投资顾问AI。我可以根据你的资产分布给你投资建议。有什么可以帮助你的吗？',
+      text: '你好！我是你的投资顾问AI。我可以根据你的资产分布、风险偏好和个人需求给你投资建议。请在下方输入你的具体投资需求或问题，例如："我想要更保守的投资策略"或"我对DeFi项目感兴趣"。',
       timestamp: Date.now()
     }
   ])
@@ -226,8 +226,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       timestamp: Date.now()
     }]);
     
-    // 未使用的变量，用于备份原始消息内容
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // 使用变量，用于备份原始消息内容
     const userInput = message;
     setMessage('');
     
@@ -238,7 +237,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     const requestInput: AdvisorRequestInput = {
       riskLevel,
       amount: Math.round(totalValue), // 使用实际总资产价值
-      cryptoAssets // 使用实际资产分布
+      cryptoAssets, // 使用实际资产分布
+      userMessage: userInput // 添加用户的对话内容
     };
     
     // 将解析后的请求显示出来
@@ -495,14 +495,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <input
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="输入您的问题..."
-              disabled={!isConnected || isProcessing}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="输入你的投资需求，我会给你专业建议..."
+              disabled={isProcessing || !isConnected}
+              onKeyPress={e => e.key === 'Enter' && handleSendMessage(e)}
             />
             <button 
               onClick={handleSendMessage} 
-              disabled={!isConnected || isProcessing}
+              disabled={isProcessing || !message.trim() || !isConnected}
               className={isProcessing ? 'processing' : ''}
             >
               {isProcessing ? '处理中...' : '发送'}

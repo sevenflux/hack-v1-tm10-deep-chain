@@ -58,9 +58,18 @@ async def generate_investment_advice(input_data: InputData) -> Dict[str, Any]:
         
         当前加密货币资产分布：
         {crypto_assets_text}
+        """
         
+        # 添加用户的具体需求描述（如果有）
+        if hasattr(input_data, 'userMessage') and input_data.userMessage:
+            user_message += f"""
+        投资者额外需求：
+        {input_data.userMessage}
+        """
+            
+        user_message += """
         我希望获得一个具体的加密货币投资组合方案，包括不同资产的配置比例。
-        请根据我当前的资产分布和风险偏好，提供更加合理的配置建议。
+        请根据我当前的资产分布、风险偏好和个人需求，提供更加合理的配置建议。
         """
         
         # 构建DeepSeek API请求
