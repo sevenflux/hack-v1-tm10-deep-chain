@@ -1,6 +1,6 @@
 # hack-v1-tm10-deep-chain
 
-# ✨F𝕚Mind —— 去中心化AI智能投顾
+# ✨F𝕚Mind — 去中心化AI智能投顾
 
 ## ⭐️项目概览  Project Overview 
 
@@ -28,13 +28,13 @@ A decentralized AI investment advisory service that provides investment referenc
 
 ## 🌟产品亮点  Product highlights
 
-- 💭**链上存证：**所有AI决策依据和生成建议可链上存证，确保数据的公开透明
+- 💭**链上存证**所有AI决策依据和生成建议可链上存证，确保数据的公开透明
 
   **On chain certificate storage:** All AI decision bases and generation suggestions can be stored on the chain to ensure the openness and transparency of data
 
-- 🙌**用户自主权强化：**用户通过钱包直接控制数据访问权限，避免中心化平台的隐私泄露风险。
+- 🙌**用户自主权强化**用户通过钱包直接控制数据访问权限，避免中心化平台的隐私泄露风险。
 
-  **Enhanced user autonomy: ** Users directly control data access rights through wallets to avoid the risk of privacy disclosure of the centralized platform.
+  **Enhanced user autonomy:** Users directly control data access rights through wallets to avoid the risk of privacy disclosure of the centralized platform.
 
 ## 🎉核心功能  Core functions
 
@@ -56,15 +56,15 @@ A decentralized AI investment advisory service that provides investment referenc
 
 ## 🌝未来规划  Future planning
 
-- **Hackthon阶段：**实现基本核心功能
+- **Hackthon阶段**实现基本核心功能
 
-  **Hackthon stage: ** Realize core functions but not integrate offline data
+  **Hackthon stage:** Realize core functions but not integrate offline data
 
-- **未来半年内：**实现大量链下数据集成
+- **未来半年内**实现大量链下数据集成
 
-  **In the next six months: ** Realize offline data integration
+  **In the next six months:** Realize offline data integration
 
-- **长期愿景：**将AI部分替换成团队自己训练出来的智能体模型
+- **长期愿景**将AI部分替换成团队自己训练出来的智能体模型
 
   **Long term vision:** Replace the AI part with the agent model trained by the team itself
 
