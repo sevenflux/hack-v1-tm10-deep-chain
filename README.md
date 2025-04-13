@@ -2,6 +2,9 @@
 
 # ✨F𝕚Mind — 去中心化AI智能投顾
 
+![cover](E:\deepChain\hack-v1-tm10-deep-chain\frontend\src\assets\cover.jpg)
+
+
 ## ⭐️项目概览  Project Overview 
 
 一个基于链上数据提供投资参考，风险评估的去中心化AI投顾服务。为用户提供个性化的投资参考建议，并确保数据的安全透明。
