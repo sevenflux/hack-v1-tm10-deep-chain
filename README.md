@@ -51,7 +51,7 @@ A decentralized AI investment advisory service that provides investment referenc
 
 - 📟**AI模型基于链上/链下数据生成策略或风险评估**
 
-  **AI model generates strategy or risk assessment based on on chain/off chain data**
+ **AI model generates strategy or risk assessment based on on chain/off chain data**
 
 - 🔑**调用合约存证**
 
