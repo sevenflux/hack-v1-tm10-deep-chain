@@ -11,7 +11,6 @@
 ### 处理节点
 - 前端: React + ethers.js
 - 后端: Python FastAPI
-- AI模型: ONNX格式
 
 ### 数据流向
 1. 前端 -> 后端: 用户输入JSON + Keccak256哈希
@@ -27,7 +26,6 @@
 - Python 3.8+
 - FastAPI: 构建高性能API
 - Web3.py: 与区块链交互
-- ONNX Runtime: 执行AI模型推理
 - IPFS/Web3.Storage: 分布式存储
 
 ## 项目结构
@@ -131,7 +129,7 @@ backend/
 {
   "input": { /* 原始用户输入 */ },
   "output": {
-    "modelVersion": "v1.0.0-onnx",
+    "modelVersion": "v1.0.0",
     "timestamp": 1712345678,
     "allocation": [
       { "asset": "BTC", "percentage": 60 },
@@ -148,10 +146,3 @@ backend/
 - 模型输出被固定在IPFS上，确保不变性
 - 请求哈希在前端生成，确保数据完整性
 
-## 开发团队
-
-- [项目团队信息]
-
-## 许可证
-
-[许可证信息] 
