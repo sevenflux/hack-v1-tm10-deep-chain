@@ -3,6 +3,7 @@ import { useAccount, useDisconnect } from 'wagmi'
 import { WalletOptions } from './WalletOptions'
 import logo from '../assets/epoch.png'
 import '../styles/Navbar.css'
+import { apiClient, FearGreedIndex } from '../api'
 
 export function Navbar() {
   const { address, isConnected } = useAccount()
@@ -10,8 +11,36 @@ export function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   
-  // 模拟恐慌指数 (实际应用中可以从API获取)
-  const fearIndex = 65
+  // 恐慌贪婪指数状态
+  const [fearGreedData, setFearGreedData] = useState<FearGreedIndex | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  // 获取恐慌贪婪指数
+  useEffect(() => {
+    async function fetchFearGreedIndex() {
+      try {
+        setLoading(true)
+        const data = await apiClient.getFearGreedIndex()
+        setFearGreedData(data)
+        setError(null)
+      } catch (err) {
+        console.error('获取恐慌贪婪指数失败:', err)
+        setError('无法加载市场数据')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchFearGreedIndex()
+    
+    // 每5分钟刷新一次数据
+    const interval = setInterval(fetchFearGreedIndex, 5 * 60 * 1000)
+    
+    return () => clearInterval(interval)
+  }, [])
+  
+  // 根据指数确定显示文本和颜色
   const getFearLevel = (index: number) => {
     if (index < 25) return { text: '极度恐慌', color: '#e74c3c' }
     if (index < 40) return { text: '恐慌', color: '#e67e22' }
@@ -20,6 +49,8 @@ export function Navbar() {
     return { text: '极度贪婪', color: '#27ae60' }
   }
   
+  // 获取恐慌贪婪指数显示
+  const fearIndex = fearGreedData?.value || 50
   const fearLevel = getFearLevel(fearIndex)
   
   const handleDisconnect = () => {
@@ -51,9 +82,15 @@ export function Navbar() {
       <div className="navbar-center">
         <div className="fear-index">
           <span>市场情绪: </span>
-          <span className="fear-level" style={{ color: fearLevel.color }}>
-            {fearLevel.text} ({fearIndex})
-          </span>
+          {loading ? (
+            <span className="loading">加载中...</span>
+          ) : error ? (
+            <span className="error">数据获取失败</span>
+          ) : (
+            <span className="fear-level" style={{ color: fearLevel.color }}>
+              {fearLevel.text} ({fearIndex})
+            </span>
+          )}
         </div>
       </div>
       

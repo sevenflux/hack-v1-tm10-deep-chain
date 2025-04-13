@@ -7,8 +7,8 @@ export * from './contractConfig';
 // 导出API客户端
 import { ApiClient } from './apiClient';
 
-// 创建API客户端单例
-export const aiApi = new ApiClient();
+// 创建一个API客户端的单例实例
+export const apiClient = new ApiClient();
 
 // 默认导出API客户端实例
-export default aiApi; 
+export default apiClient; 

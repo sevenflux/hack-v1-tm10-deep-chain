@@ -5,7 +5,9 @@ import {
   IPFSStorageData,
   APIError,
   generateRequestHash,
-  BlockchainRequest
+  BlockchainRequest,
+  MarketDataResponse,
+  FearGreedIndex
 } from './types';
 
 // API 基础URL - 根据环境配置
@@ -144,6 +146,59 @@ export class ApiClient {
     } catch (error) {
       console.error('获取用户历史记录失败:', error);
       return [];
+    }
+  }
+
+  /**
+   * 获取市场数据
+   * @returns 市场数据响应
+   */
+  async getMarketData(): Promise<MarketDataResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/market/data`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new APIError(
+          errorData.detail || '获取市场数据失败',
+          response.status,
+          errorData.error
+        );
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('获取市场数据失败:', error);
+      return {
+        success: false,
+        error: error instanceof APIError ? error.message : '获取市场数据时发生错误',
+        message: '无法获取市场数据'
+      };
+    }
+  }
+  
+  /**
+   * 获取恐慌与贪婪指数
+   * @returns 恐慌与贪婪指数数据
+   */
+  async getFearGreedIndex(): Promise<FearGreedIndex | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/market/fear-greed`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new APIError(
+          errorData.detail || '获取恐慌与贪婪指数失败',
+          response.status,
+          errorData.error
+        );
+      }
+      
+      const result = await response.json();
+      return result.data || null;
+    } catch (error) {
+      console.error('获取恐慌与贪婪指数失败:', error);
+      return null;
     }
   }
 } 

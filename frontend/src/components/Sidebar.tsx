@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAccount, useBalance, useReadContracts, useBlockNumber } from 'wagmi'
-import { AdvisorRequestInput, CryptoAsset, aiApi, APIError } from '../api'
+import { AdvisorRequestInput, CryptoAsset, apiClient, APIError } from '../api'
 import { SUPPORTED_TOKENS, TOKEN_ABI, TokenInfo, SUPPORTED_CHAINS } from '../config/tokens'
 import '../styles/Sidebar.css'
 
@@ -265,7 +265,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     
     // 调用API获取投资建议
     try {
-      const response = await aiApi.getAdvice(address, requestInput);
+      const response = await apiClient.getAdvice(address, requestInput);
       
       // 更新聊天历史
       setChatHistory(prev => [...prev, {
@@ -397,7 +397,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       onClick={() => {
                         // 尝试使用API验证交易
                         try {
-                          aiApi.verifyTransaction(msg.txHash as string)
+                          apiClient.verifyTransaction(msg.txHash as string)
                             .then(result => {
                               if (result.success && result.data) {
                                 alert(`验证成功: 交易已在区块 ${result.data.blockNumber} 确认`);

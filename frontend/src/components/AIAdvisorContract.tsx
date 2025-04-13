@@ -4,7 +4,7 @@ import { Address } from 'viem'
 import { 
   AI_CONTRACT_ADDRESS, 
   AI_CONTRACT_ABI, 
-  aiApi, 
+  apiClient, 
   getEtherscanLink
 } from '../api'
 import { BlockchainRequest } from '../api/types'
@@ -55,7 +55,7 @@ export function AIAdvisorContract() {
       setIsLoading(true);
       console.log("尝试从API获取历史记录...");
       
-      const historyData = await aiApi.getUserRequests(address);
+      const historyData = await apiClient.getUserRequests(address);
       
       if (historyData && historyData.length > 0) {
         console.log("成功从API获取历史记录:", historyData);
@@ -85,7 +85,7 @@ export function AIAdvisorContract() {
     await Promise.all(
       requests.map(async (req, index) => {
         try {
-          const ipfsData = await aiApi.getIpfsData(req.cid)
+          const ipfsData = await apiClient.getIpfsData(req.cid)
           if (ipfsData && ipfsData.output) {
             updatedHistory[index] = {
               ...updatedHistory[index],
@@ -127,7 +127,7 @@ export function AIAdvisorContract() {
       alert(`正在验证请求ID: ${requestHash}\n\n请注意: 这是请求的唯一标识符，不是实际的交易哈希。系统将尝试查找与此请求关联的交易。`);
       
       // 使用API验证交易
-      const verification = await aiApi.verifyTransaction(requestHash)
+      const verification = await apiClient.verifyTransaction(requestHash)
       
       if (verification.success && verification.data) {
         // 显示成功信息并提供真实的交易哈希链接

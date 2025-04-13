@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 from app.core.config import settings
-from app.routers import advice
+from app.routers import advice, market_data
 
 # 配置日志
 logging.basicConfig(
@@ -40,6 +40,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # 包含路由
 app.include_router(advice.router)
+app.include_router(market_data.router)
 
 # 健康检查端点
 @app.get("/health")

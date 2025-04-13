@@ -46,6 +46,23 @@
     font-weight: 600;
   }
   
+  .loading {
+    font-weight: 600;
+    color: #95a5a6;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+  
+  .error {
+    font-weight: 600;
+    color: #e74c3c;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  
   .navbar-right {
     display: flex;
     align-items: center;

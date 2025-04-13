@@ -156,4 +156,39 @@ export function verifySignature(message: string, signature: string, timestamp: n
     console.error('签名验证失败:', error);
     return false;
   }
+}
+
+// 市场恐慌与贪婪指数数据接口
+export interface FearGreedIndex {
+  value: number;                 // 恐慌贪婪指数值(0-100)
+  value_classification: string;  // 指数分类文字描述
+  timestamp: string;             // 时间戳
+}
+
+// 市场趋势数据接口
+export interface MarketTrend {
+  trend: string;                // 市场趋势: "看涨", "看跌", "盘整"
+  description: string;          // 趋势描述
+  fear_greed_value: number;     // 关联的恐慌贪婪指数值
+  timestamp: string;            // 时间戳
+}
+
+// 以太坊GAS费数据接口
+export interface EthGasPrice {
+  low: number;       // 低速确认价格(Gwei)
+  average: number;   // 中速确认价格(Gwei)
+  high: number;      // 快速确认价格(Gwei)
+  timestamp: string; // 时间戳
+}
+
+// 市场数据响应接口
+export interface MarketDataResponse {
+  success: boolean;
+  data?: {
+    fear_greed_index: FearGreedIndex;
+    market_trend: MarketTrend;
+    gas_price: EthGasPrice;
+  };
+  message?: string;
+  error?: string;
 } 

@@ -38,6 +38,9 @@ class Settings:
         self.PINATA_JWT = None
         self.IPFS_GATEWAY_URL = "https://ipfs.io/ipfs/"
         
+        # API密钥设置
+        self.INFURA_API_KEY = ""
+        
         # DeepSeek API设置
         self.DEEPSEEK_API_KEY = ""
         self.DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
@@ -79,7 +82,6 @@ class Settings:
                         processed_value = processed_value[1:-1]
                     elif processed_value.startswith("'") and processed_value.endswith("'"):
                         processed_value = processed_value[1:-1]
-                        
                     setattr(self, attr_name, processed_value)
     
     def _load_dotenv(self):

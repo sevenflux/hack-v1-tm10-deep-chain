@@ -5,6 +5,7 @@ import aiohttp
 from typing import Dict, Any, List
 from ..schemas.advice import InputData
 from ..core.config import settings
+from .market_data import get_all_market_data
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -30,9 +31,12 @@ async def generate_investment_advice(input_data: InputData) -> Dict[str, Any]:
             logger.error("DeepSeek API密钥未配置")
             raise ValueError("DeepSeek API密钥未配置")
         
+        # 获取市场数据
+        market_data = await get_all_market_data()
+        
         # 构建提示词
         system_prompt = """
-        你是一个专业的投资顾问AI，根据用户提供的风险偏好、投资金额和当前加密货币资产分布提供投资建议。
+        你是一个专业的投资顾问AI，根据用户提供的风险偏好、投资金额、当前加密货币资产分布和最新市场数据提供投资建议。
         你需要给出具体的加密货币资产配置比例，包括主流加密货币和稳定币。
         请按照以下JSON格式输出：
         {
@@ -50,14 +54,28 @@ async def generate_investment_advice(input_data: InputData) -> Dict[str, Any]:
         for asset in input_data.cryptoAssets:
             crypto_assets_text += f"- {asset.symbol}: {asset.percentage}%\n"
         
+        # 格式化市场数据
+        fear_greed = market_data.get("fear_greed_index", {})
+        market_trend = market_data.get("market_trend", {})
+        gas_price = market_data.get("eth_gas_price", {})
+        
+        market_data_text = f"""
+        市场情绪指数: {fear_greed.get('value', 50)} ({fear_greed.get('value_classification', 'Neutral')})
+        市场趋势: {market_trend.get('trend', '盘整')} - {market_trend.get('description', '无法确定市场趋势')}
+        以太坊GAS费: 低: {gas_price.get('low', 0)} Gwei, 平均: {gas_price.get('average', 0)} Gwei, 高: {gas_price.get('high', 0)} Gwei
+        """
+        
         # 构建用户消息
         user_message = f"""
-        请根据以下投资者信息提供加密货币资产配置建议：
+        请根据以下投资者信息和最新市场数据提供加密货币资产配置建议：
         风险偏好：{input_data.riskLevel}（low=保守, medium=中等, high=激进）
         投资金额：{input_data.amount}
         
         当前加密货币资产分布：
         {crypto_assets_text}
+        
+        最新市场数据：
+        {market_data_text}
         """
         
         # 添加用户的具体需求描述（如果有）
@@ -142,7 +160,8 @@ async def generate_investment_advice(input_data: InputData) -> Dict[str, Any]:
                         "modelVersion": f"deepseek-api-{DEEPSEEK_MODEL}",
                         "timestamp": int(time.time()),
                         "allocation": allocation,
-                        "allocationText": ai_data["allocationText"]
+                        "allocationText": ai_data["allocationText"],
+                        "market_data": market_data  # 添加市场数据到返回中，用于IPFS存储
                     }
                     
                 except (json.JSONDecodeError, ValueError) as e:
@@ -162,5 +181,6 @@ async def generate_investment_advice(input_data: InputData) -> Dict[str, Any]:
                 {"asset": "ETH", "percentage": 15},
                 {"asset": "债券", "percentage": 15}
             ],
-            "allocationText": "50% USDC, 20% BTC, 15% ETH, 15% 债券"
+            "allocationText": "50% USDC, 20% BTC, 15% ETH, 15% 债券",
+            "market_data": await get_all_market_data()  # 即使在错误情况下也添加市场数据
         } 
