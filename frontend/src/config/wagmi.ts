@@ -21,11 +21,9 @@ const mantle = {
   }
 }
 
-// 替换为你的 WalletConnect 项目 ID
-// 项目 ID 用于 WalletConnect 协议，可以从 https://cloud.walletconnect.com/ 获取
-// 如果只使用 MetaMask 等注入式钱包，可以不填写此项
-// 但如果要支持 WalletConnect 协议（用于移动钱包连接），则必须提供有效的项目 ID
-const projectId = 'a591cf3c592769652bd36a7e6e31e137'
+// 从环境变量获取 WalletConnect 项目 ID
+// 如果环境变量未设置，则使用备用值（仅用于开发环境）
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || ''
 
 // 创建 transports 对象
 const transports: Record<number, any> = {}

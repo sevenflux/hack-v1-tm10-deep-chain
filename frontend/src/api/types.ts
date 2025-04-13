@@ -119,7 +119,7 @@ export function generateRequestHash(input: AdvisorRequestInput): string {
     };
     
     // 序列化为JSON，使用特定格式 (与后端相匹配)
-    const jsonStr = JSON.stringify(sortedInput, (key, value) => {
+    const jsonStr = JSON.stringify(sortedInput, (_key, value) => {
       // 使值格式化方式与后端一致
       if (typeof value === 'number') {
         // 确保数字格式一致
