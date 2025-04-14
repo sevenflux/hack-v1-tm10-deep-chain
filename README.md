@@ -71,6 +71,10 @@ A decentralized AI investment advisory service that provides investment referenc
 
   **Long term vision:** Replace the AI part with the agent model trained by the team itself
 
+## 📹 demo video
+
+ https://drive.google.com/file/d/1pMIdUIEP63sPMZlSzs8-bXzYSQNHhjfj/view?usp=drive_link
+
 ## ⚡️免责声明  Disclaimer
 
 - 本平台提供的所有AI生成的投资策略、分析或建议**仅供教育和信息参考**，不构成财务、法律或税务建议。
