@@ -19,9 +19,9 @@ A decentralized AI investment advisory service that provides investment referenc
 
   **Privacy risk** of centralized platform
 
-- 数据的**低透明度**（“黑箱”决策）
-
-  **Low transparency** of data ("black box" decision)
+- 不法分子通过AI投顾套利的**乱象**
+  
+  The **chaos** of criminals arbitrage through AI investment advisers
 
 😋**Web3市场的机会  Opportunities in the Web3 market：**
 
@@ -88,3 +88,5 @@ A decentralized AI investment advisory service that provides investment referenc
 - 平台可能集成第三方协议、钱包（如MetaMask）或数据源，**其服务中断、欺诈或错误导致的损失与本平台无关**。
 
   The platform may integrate third-party agreements, wallets (such as MetaMask) or data sources. **The loss caused by service interruption, fraud or error is irrelevant to the platform**.
+
+
