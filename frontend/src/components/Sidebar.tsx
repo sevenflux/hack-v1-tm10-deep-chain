@@ -132,67 +132,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // 构建原生代币余额数组的引用
   const nativeBalancesRef = useRef<any[]>([]);
   
-  // 初始化余额引用
-  useEffect(() => {
-    // 构建原生代币余额数组
-    nativeBalancesRef.current = [
-      {
-        data: ethMainnetHook.data,
-        refetch: ethMainnetHook.refetch,
-        token: nativeTokens.find(t => t.chainId === 1) || {
-          chainId: 1,
-          symbol: 'ETH',
-          name: 'Ethereum',
-          decimals: 18,
-          price: 1,
-          chainKey: 'ethereum'
-        }
-      },
-      {
-        data: bscMainnetHook.data,
-        refetch: bscMainnetHook.refetch,
-        token: nativeTokens.find(t => t.chainId === 56) || {
-          chainId: 56,
-          symbol: 'BNB',
-          name: 'Binance Coin',
-          decimals: 18,
-          price: 1,
-          chainKey: 'bsc'
-        }
-      },
-      {
-        data: polygonMainnetHook.data,
-        refetch: polygonMainnetHook.refetch,
-        token: nativeTokens.find(t => t.chainId === 137) || {
-          chainId: 137,
-          symbol: 'MATIC',
-          name: 'Polygon',
-          decimals: 18,
-          price: 1,
-          chainKey: 'polygon'
-        }
-      },
-      {
-        data: arbitrumMainnetHook.data,
-        refetch: arbitrumMainnetHook.refetch,
-        token: nativeTokens.find(t => t.chainId === 42161) || {
-          chainId: 42161,
-          symbol: 'ETH',
-          name: 'Ethereum',
-          decimals: 18,
-          price: 1,
-          chainKey: 'arbitrum'
-        }
-      }
-    ];
-  }, [
-    ethMainnetHook.data, ethMainnetHook.refetch,
-    bscMainnetHook.data, bscMainnetHook.refetch,
-    polygonMainnetHook.data, polygonMainnetHook.refetch,
-    arbitrumMainnetHook.data, arbitrumMainnetHook.refetch,
-    nativeTokens
-  ]);
-  
   // 刷新所有余额的函数
   const refreshAllBalances = useCallback(() => {
     if (!address) return;
@@ -213,81 +152,183 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // 当区块号变化时，自动刷新余额
   useEffect(() => {
     if (blockNumber && address) {
-      refreshAllBalances();
-    }
-  }, [blockNumber, address, refreshAllBalances]);
-  
-  // 处理余额数据变化
-  useEffect(() => {
-    if (!address) return;
-    
-    setIsLoadingBalances(true);
-    
-    // 初始化新的余额对象
-    const newBalances: {[key: string]: { token: TokenInfo, balance: number, value: number }} = {};
-    let newTotalValue = 0;
-    
-    // 处理ERC20代币余额
-    if (erc20Data) {
-      erc20Data.forEach((result, index) => {
-        if (index >= erc20Tokens.length) return; // 安全检查
-        
-        const token = erc20Tokens[index];
-        if (result.status === 'success' && result.result) {
-          const rawBalance = result.result;
-          const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals);
-          
-          // 使用配置的价格
-          const value = formattedBalance * (token.price || 1);
-          
-          if (formattedBalance > 0) {
-            newBalances[token.symbol + '-' + token.chainKey] = {
-              token,
-              balance: formattedBalance,
-              value
-            };
-            newTotalValue += value;
-          }
+      // 不直接调用refreshAllBalances以避免无限循环
+      // 只刷新ERC20和native token的余额，不重新计算
+      refetchErc20();
+      nativeBalancesRef.current.forEach(item => {
+        if (item && typeof item.refetch === 'function') {
+          item.refetch();
         }
       });
     }
-    
-    // 处理原生代币余额
-    nativeBalancesRef.current.forEach(({ data, token }) => {
-      if (data) {
-        const formattedBalance = Number(data.formatted);
-        const value = formattedBalance * (token.price || 0);
-        
-        if (formattedBalance > 0) {
-          newBalances[token.symbol + '-' + token.chainKey] = {
-            token: {
-              symbol: token.symbol,
-              name: token.name,
-              address: 'native',
-              decimals: token.decimals,
-              chainKey: token.chainKey,
-              chainId: token.chainId,
-              price: token.price
-            },
-            balance: formattedBalance,
-            value
-          };
-          newTotalValue += value;
+  }, [blockNumber, address, refetchErc20]);
+  
+  // 添加单独的Effect来监听原生代币余额变化
+  useEffect(() => {
+    if (address) {
+      // 仅更新nativeBalancesRef，不触发余额计算
+      nativeBalancesRef.current = [
+        {
+          data: ethMainnetHook.data,
+          refetch: ethMainnetHook.refetch,
+          token: nativeTokens.find(t => t.chainId === 1) || {
+            chainId: 1,
+            symbol: 'ETH',
+            name: 'Ethereum',
+            decimals: 18,
+            price: 1,
+            chainKey: 'ethereum'
+          }
+        },
+        {
+          data: bscMainnetHook.data,
+          refetch: bscMainnetHook.refetch,
+          token: nativeTokens.find(t => t.chainId === 56) || {
+            chainId: 56,
+            symbol: 'BNB',
+            name: 'Binance Coin',
+            decimals: 18,
+            price: 1,
+            chainKey: 'bsc'
+          }
+        },
+        {
+          data: polygonMainnetHook.data,
+          refetch: polygonMainnetHook.refetch,
+          token: nativeTokens.find(t => t.chainId === 137) || {
+            chainId: 137,
+            symbol: 'MATIC',
+            name: 'Polygon',
+            decimals: 18,
+            price: 1,
+            chainKey: 'polygon'
+          }
+        },
+        {
+          data: arbitrumMainnetHook.data,
+          refetch: arbitrumMainnetHook.refetch,
+          token: nativeTokens.find(t => t.chainId === 42161) || {
+            chainId: 42161,
+            symbol: 'ETH',
+            name: 'Ethereum',
+            decimals: 18,
+            price: 1,
+            chainKey: 'arbitrum'
+          }
         }
-      }
-    });
-    
-    setTokenBalances(newBalances);
-    setTotalValue(newTotalValue);
-    setIsLoadingBalances(false);
+      ];
+    }
   }, [
-    address, 
-    erc20Data, 
-    erc20Tokens, 
+    address,
     ethMainnetHook.data,
     bscMainnetHook.data,
     polygonMainnetHook.data,
-    arbitrumMainnetHook.data
+    arbitrumMainnetHook.data,
+    nativeTokens
+  ]);
+  
+  // 添加单独的Effect来处理原生代币余额变化后的计算
+  useEffect(() => {
+    // 使用定时器和引用对比来防止无限循环
+    let hasNativeBalances = nativeBalancesRef.current.length > 0 && 
+                           nativeBalancesRef.current.some(item => item.data);
+    
+    if (hasNativeBalances && address && !isLoadingBalances) {
+      // 使用请求ID跟踪本次计算，防止重复计算
+      const requestId = Date.now();
+      
+      // 使用debounce防止频繁计算
+      const timer = setTimeout(() => {
+        // 检查组件是否仍然需要更新
+        if (address) {
+          console.log('更新原生代币余额计算', requestId);
+          
+          // 标记为加载中
+          setIsLoadingBalances(true);
+          
+          // 使用setTimeout将状态更新放入下一个事件循环
+          setTimeout(() => {
+            // 再次检查地址
+            if (address) {
+              // 使用函数式更新，避免依赖旧的状态值
+              setTokenBalances(prev => {
+                const newBalances = {...prev};
+                let newTotalValue = 0;
+                
+                // 只处理原生代币余额，保留之前的ERC20余额
+                Object.values(prev).forEach(item => {
+                  if (item.token.address !== 'native') {
+                    newTotalValue += item.value;
+                  }
+                });
+                
+                // 处理原生代币余额
+                nativeBalancesRef.current.forEach(({ data, token }) => {
+                  if (data) {
+                    const formattedBalance = Number(data.formatted);
+                    const value = formattedBalance * (token.price || 0);
+                    
+                    if (formattedBalance > 0) {
+                      const tokenKey = token.symbol + '-' + token.chainKey;
+                      
+                      // 只有当余额或价格变化时才更新
+                      const existingToken = prev[tokenKey];
+                      if (!existingToken || 
+                          existingToken.balance !== formattedBalance || 
+                          existingToken.token.price !== token.price) {
+                        
+                        newBalances[tokenKey] = {
+                          token: {
+                            symbol: token.symbol,
+                            name: token.name,
+                            address: 'native',
+                            decimals: token.decimals,
+                            chainKey: token.chainKey,
+                            chainId: token.chainId,
+                            price: token.price
+                          },
+                          balance: formattedBalance,
+                          value
+                        };
+                      } else {
+                        // 保留原有数据减少不必要的渲染
+                        newBalances[tokenKey] = existingToken;
+                      }
+                      
+                      // 无论是否更新，都要计入总值
+                      newTotalValue += value;
+                    }
+                  }
+                });
+                
+                // 更新总值
+                if (Math.abs(totalValue - newTotalValue) > 0.01) {
+                  setTotalValue(newTotalValue);
+                }
+                
+                return newBalances;
+              });
+            }
+            
+            // 完成加载
+            setIsLoadingBalances(false);
+          }, 0);
+        }
+      }, 500); // 增加debounce时间到500ms
+      
+      return () => clearTimeout(timer);
+    }
+  }, [
+    address,
+    // 使用JSON.stringify处理数据依赖，避免频繁触发
+    JSON.stringify({
+      eth: ethMainnetHook.data?.formatted,
+      bsc: bscMainnetHook.data?.formatted,
+      polygon: polygonMainnetHook.data?.formatted,
+      arbitrum: arbitrumMainnetHook.data?.formatted
+    }),
+    isLoadingBalances,
+    totalValue
   ]);
   
   // 转换为API所需的CryptoAsset格式
@@ -618,6 +659,23 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         <div key={i}>{renderTradeItem(trade)}</div>
                       ))}
                     </div>
+                    {/* 添加批量处理所有交易的选项 */}
+                    {msg.trades.length > 1 && (
+                      <div className="batch-trade-option">
+                        <button 
+                          className="batch-trade-button"
+                          onClick={() => {
+                            // 打开交易组件处理所有交易
+                            setShowSwapWidget(true);
+                            setShowOverlay(true);
+                            // 传递所有交易而不是单个交易
+                            setSelectedTrade(null);
+                          }}
+                        >
+                          一键批量处理所有交易
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {msg.cid && msg.txHash && (
@@ -753,9 +811,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       
       {/* 添加交易组件和背景遮罩 */}
       {showOverlay && <div className="swap-overlay" onClick={handleCloseSwapWidget}></div>}
-      {showSwapWidget && selectedTrade && (
+      {showSwapWidget && (
         <TokenSwapWidget 
           trade={selectedTrade} 
+          trades={selectedTrade ? undefined : chatHistory.find(msg => msg.trades)?.trades}
+          userAddress={address || ''}
           onComplete={handleTradeComplete} 
           onClose={handleCloseSwapWidget} 
         />

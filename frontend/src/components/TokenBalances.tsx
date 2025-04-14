@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAccount, useReadContracts, useBalance, useBlockNumber } from 'wagmi'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { 
@@ -69,50 +69,113 @@ export function TokenBalances() {
     chainKey: chain.key
   }))
 
-  // 为每个链创建useBalance hook
-  const nativeBalances = nativeTokens.map(token => {
-    const { data, isError, isLoading, refetch } = useBalance({
-      address,
-      chainId: token.chainId,
-      query: {
-        enabled: Boolean(address),
-        refetchInterval: 30000, // 每30秒自动刷新一次
+  // 为每条链直接声明余额hooks (不在循环或useMemo中使用hooks)
+  // 以太坊主网余额
+  const ethMainnetHook = useBalance({
+    address,
+    chainId: 1, // 以太坊主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // BSC主网余额
+  const bscMainnetHook = useBalance({
+    address,
+    chainId: 56, // BSC主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // Polygon主网余额
+  const polygonMainnetHook = useBalance({
+    address,
+    chainId: 137, // Polygon主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // Arbitrum主网余额
+  const arbitrumMainnetHook = useBalance({
+    address,
+    chainId: 42161, // Arbitrum主网ID
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 30000
+    }
+  });
+  
+  // 使用useMemo整合原生代币余额数据，而不是在useMemo中调用hook
+  const nativeBalances = useMemo(() => {
+    return [
+      {
+        data: ethMainnetHook.data,
+        isError: ethMainnetHook.isError,
+        isLoading: ethMainnetHook.isLoading,
+        refetch: ethMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 1) || {
+          chainId: 1,
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+          chainKey: 'ethereum'
+        }
+      },
+      {
+        data: bscMainnetHook.data,
+        isError: bscMainnetHook.isError,
+        isLoading: bscMainnetHook.isLoading, 
+        refetch: bscMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 56) || {
+          chainId: 56,
+          symbol: 'BNB',
+          name: 'Binance Coin',
+          decimals: 18,
+          chainKey: 'bsc'
+        }
+      },
+      {
+        data: polygonMainnetHook.data,
+        isError: polygonMainnetHook.isError,
+        isLoading: polygonMainnetHook.isLoading,
+        refetch: polygonMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 137) || {
+          chainId: 137,
+          symbol: 'MATIC',
+          name: 'Polygon',
+          decimals: 18,
+          chainKey: 'polygon'
+        }
+      },
+      {
+        data: arbitrumMainnetHook.data,
+        isError: arbitrumMainnetHook.isError,
+        isLoading: arbitrumMainnetHook.isLoading,
+        refetch: arbitrumMainnetHook.refetch,
+        token: nativeTokens.find(t => t.chainId === 42161) || {
+          chainId: 42161,
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+          chainKey: 'arbitrum'
+        }
       }
-    })
-    return { data, isError, isLoading, refetch, token }
-  })
-
-  // 刷新价格数据并重新计算资产价值
-  const refreshPrices = async () => {
-    setIsLoading(true);
-    await updateAllTokenPrices();
-    setPricesUpdated(true);
-    
-    // 触发余额重新计算
-    refreshBalances();
-  };
-
-  // 手动刷新所有余额
-  const refreshAllBalances = async () => {
-    if (!address) return;
-    
-    setIsLoading(true);
-    
-    // 刷新价格数据
-    await updateAllTokenPrices();
-    setPricesUpdated(true);
-    
-    // 刷新ERC20代币余额
-    refetchErc20();
-    
-    // 刷新所有原生代币余额
-    nativeBalances.forEach(({ refetch }) => refetch());
-    
-    setLastRefreshTime(new Date());
-  };
+    ];
+  }, [
+    ethMainnetHook.data, ethMainnetHook.isError, ethMainnetHook.isLoading, ethMainnetHook.refetch,
+    bscMainnetHook.data, bscMainnetHook.isError, bscMainnetHook.isLoading, bscMainnetHook.refetch,
+    polygonMainnetHook.data, polygonMainnetHook.isError, polygonMainnetHook.isLoading, polygonMainnetHook.refetch,
+    arbitrumMainnetHook.data, arbitrumMainnetHook.isError, arbitrumMainnetHook.isLoading, arbitrumMainnetHook.refetch,
+    nativeTokens
+  ]);
 
   // 计算余额和总价值（不获取新数据）
-  const refreshBalances = () => {
+  const refreshBalances = useCallback(() => {
     if (!address) return;
     
     // 初始化新的余额对象
@@ -180,14 +243,47 @@ export function TokenBalances() {
     if (pricesUpdated) {
       setPricesUpdated(false);
     }
-  };
+  }, [address, erc20Data, erc20Tokens, nativeBalances, pricesUpdated]);
+
+  // 刷新价格数据并重新计算资产价值
+  const refreshPrices = useCallback(async () => {
+    setIsLoading(true);
+    await updateAllTokenPrices();
+    setPricesUpdated(true);
+    
+    // 触发余额重新计算
+    refreshBalances();
+  }, [refreshBalances]);
+
+  // 手动刷新所有余额
+  const refreshAllBalances = useCallback(async () => {
+    if (!address) return;
+    
+    setIsLoading(true);
+    
+    // 刷新价格数据
+    await updateAllTokenPrices();
+    setPricesUpdated(true);
+    
+    // 刷新ERC20代币余额
+    refetchErc20();
+    
+    // 刷新所有原生代币余额
+    nativeBalances.forEach(({ refetch }) => refetch());
+    
+    setLastRefreshTime(new Date());
+  }, [address, refetchErc20, nativeBalances]);
 
   // 当区块号变化时，自动刷新余额
   useEffect(() => {
     if (blockNumber && address) {
-      refreshAllBalances();
+      // 不直接调用refreshAllBalances以避免无限循环
+      // 只刷新ERC20和native token的余额，不重新计算
+      refetchErc20();
+      nativeBalances.forEach(({ refetch }) => refetch());
+      setLastRefreshTime(new Date());
     }
-  }, [blockNumber, address]);
+  }, [blockNumber, address, refetchErc20]);
 
   // 确保一进入组件就立即更新价格
   useEffect(() => {
@@ -197,15 +293,25 @@ export function TokenBalances() {
         refreshBalances();
       }
     });
+    // 空依赖数组确保只在组件挂载时运行一次
   }, []);
 
   // 当数据变化时计算余额
   useEffect(() => {
     if (address) {
       setIsLoading(true);
+      // 使用memoized值或缓存的引用，避免直接依赖nativeBalances
       refreshBalances();
     }
-  }, [address, erc20Data, nativeBalances]);
+    // 仅当真正需要更新的数据变化时才重新计算
+  }, [address, erc20Data]);  // 移除 nativeBalances 依赖
+
+  // 当native token余额变化时单独处理
+  useEffect(() => {
+    if (address && !isLoading) {
+      refreshBalances();
+    }
+  }, [nativeBalances.map(item => item.data?.formatted).join(','), address, isLoading]);
 
   // 设置自动更新时间显示
   useEffect(() => {

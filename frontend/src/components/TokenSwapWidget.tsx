@@ -4,19 +4,31 @@ import { useAccount } from 'wagmi'
 import '../styles/TokenSwapWidget.css'
 
 interface TokenSwapWidgetProps {
-  trade: TradeItem
+  trade?: TradeItem
+  trades?: TradeItem[]
+  userAddress?: string
   onComplete?: (success: boolean) => void
   onClose?: () => void
 }
 
-export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetProps) {
+export function TokenSwapWidget({ trade, trades, userAddress, onComplete, onClose }: TokenSwapWidgetProps) {
   const { address, isConnected } = useAccount()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+  const [activeTradeIndex, setActiveTradeIndex] = useState(0)
+  
+  // 使用参数中提供的地址或从钱包连接中获取地址
+  const effectiveAddress = userAddress || (isConnected ? address : undefined)
+  
+  // 获取当前处理的交易
+  const currentTrade = trade || (trades && trades.length > activeTradeIndex ? trades[activeTradeIndex] : undefined)
+  
+  // 是否为批量交易模式
+  const isBatchMode = !trade && trades && trades.length > 0
+  
   // 处理交易
   const handleSwap = async () => {
-    if (!trade || !isConnected || !address) {
+    if (!currentTrade || !effectiveAddress) {
       setError('请先连接钱包')
       return
     }
@@ -28,7 +40,13 @@ export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetP
       // 模拟交易过程
       setTimeout(() => {
         setIsLoading(false)
-        onComplete?.(true)
+        
+        // 如果是批量模式并且还有下一个交易
+        if (isBatchMode && trades && activeTradeIndex < trades.length - 1) {
+          setActiveTradeIndex(activeTradeIndex + 1)
+        } else {
+          onComplete?.(true)
+        }
       }, 2000)
     } catch (err: any) {
       console.error('交易执行失败:', err)
@@ -40,55 +58,86 @@ export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetP
 
   // 跳转到外部交易平台
   const goToExternalExchange = () => {
+    if (!currentTrade) return
+    
     // 判断需要去哪个平台交易
     let url = '';
     
     // 如果是同链交易，跳转到对应链的DEX
-    if (trade.fromChain === trade.toChain) {
-      if (trade.fromChain === 'ethereum') {
-        url = `https://app.uniswap.org/#/swap?inputCurrency=${trade.fromAsset}&outputCurrency=${trade.toAsset}`;
-      } else if (trade.fromChain === 'polygon') {
-        url = `https://quickswap.exchange/#/swap?inputCurrency=${trade.fromAsset}&outputCurrency=${trade.toAsset}`;
-      } else if (trade.fromChain === 'bsc') {
-        url = `https://pancakeswap.finance/swap?inputCurrency=${trade.fromAsset}&outputCurrency=${trade.toAsset}`;
+    if (currentTrade.fromChain === currentTrade.toChain) {
+      if (currentTrade.fromChain === 'ethereum') {
+        url = `https://app.uniswap.org/#/swap?inputCurrency=${currentTrade.fromAsset}&outputCurrency=${currentTrade.toAsset}`;
+      } else if (currentTrade.fromChain === 'polygon') {
+        url = `https://quickswap.exchange/#/swap?inputCurrency=${currentTrade.fromAsset}&outputCurrency=${currentTrade.toAsset}`;
+      } else if (currentTrade.fromChain === 'bsc') {
+        url = `https://pancakeswap.finance/swap?inputCurrency=${currentTrade.fromAsset}&outputCurrency=${currentTrade.toAsset}`;
       } else {
-        url = `https://app.1inch.io/#/${trade.fromChain}/simple/swap/${trade.fromAsset}/${trade.toAsset}`;
+        url = `https://app.1inch.io/#/${currentTrade.fromChain}/simple/swap/${currentTrade.fromAsset}/${currentTrade.toAsset}`;
       }
     } 
     // 如果是跨链交易，跳转到跨链平台
     else {
-      url = `https://app.across.to/?from=${trade.fromChain}&to=${trade.toChain}`;
+      url = `https://app.across.to/?from=${currentTrade.fromChain}&to=${currentTrade.toChain}`;
     }
     
     window.open(url, '_blank');
     
-    // 通知完成
-    setTimeout(() => {
-      onComplete?.(true);
-    }, 1000);
+    // 如果是批量模式并且还有下一个交易
+    if (isBatchMode && trades && activeTradeIndex < trades.length - 1) {
+      setTimeout(() => {
+        setActiveTradeIndex(activeTradeIndex + 1);
+      }, 1000);
+    } else {
+      // 通知完成
+      setTimeout(() => {
+        onComplete?.(true);
+      }, 1000);
+    }
   };
 
-  // 如果链不同，显示跨链交换信息
-  const isCrossChain = trade.fromChain !== trade.toChain;
-  
-  if (!trade) {
+  // 如果没有交易数据，显示提示信息
+  if (!currentTrade) {
     return <div className="swap-container">没有可用的交易数据</div>
   }
+
+  // 如果链不同，显示跨链交换信息
+  const isCrossChain = currentTrade.fromChain !== currentTrade.toChain;
 
   return (
     <div className="swap-widget-container">
       <div className="swap-widget-header">
-        <h3>执行交易</h3>
+        <h3>
+          执行交易 
+          {isBatchMode && trades && (
+            <span className="batch-indicator">
+              ({activeTradeIndex + 1}/{trades.length})
+            </span>
+          )}
+        </h3>
         {onClose && (
           <button className="close-swap-widget" onClick={onClose}>×</button>
         )}
       </div>
 
       <div className="swap-widget-content">
+        {isBatchMode && trades && trades.length > 1 && (
+          <div className="batch-navigation">
+            <div className="batch-progress">
+              {trades.map((_, index) => (
+                <div 
+                  key={index} 
+                  className={`progress-dot ${index === activeTradeIndex ? 'active' : index < activeTradeIndex ? 'completed' : ''}`}
+                  onClick={() => setActiveTradeIndex(index)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
         {isCrossChain && (
           <div className="cross-chain-warning">
             <p>⚠️ 跨链交易需要使用桥接服务</p>
-            <p>从 {trade.fromChain} 到 {trade.toChain}</p>
+            <p>从 {currentTrade.fromChain} 到 {currentTrade.toChain}</p>
           </div>
         )}
         
@@ -103,19 +152,19 @@ export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetP
             <p>交易摘要：</p>
             <div className="swap-assets">
               <span className="from-asset">
-                {trade.amount} {trade.fromAsset}
-                <span className="chain-tag" data-chain={trade.fromChain}>{trade.fromChain}</span>
+                {currentTrade.amount} {currentTrade.fromAsset}
+                <span className="chain-tag" data-chain={currentTrade.fromChain}>{currentTrade.fromChain}</span>
               </span>
               <span className="arrow">→</span>
               <span className="to-asset">
-                {trade.toAsset}
-                <span className="chain-tag" data-chain={trade.toChain}>{trade.toChain}</span>
+                {currentTrade.toAsset}
+                <span className="chain-tag" data-chain={currentTrade.toChain}>{currentTrade.toChain}</span>
               </span>
             </div>
             
-            {trade.reason && (
+            {currentTrade.reason && (
               <div className="swap-reason">
-                原因: {trade.reason}
+                原因: {currentTrade.reason}
               </div>
             )}
           </div>
@@ -127,8 +176,8 @@ export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetP
               <h5>{isCrossChain ? '跨链' : '同链'}交易</h5>
               <p>
                 {isCrossChain 
-                  ? `从${trade.fromChain}到${trade.toChain}的跨链交易需要使用专业的桥接服务。` 
-                  : `在${trade.fromChain}链上进行${trade.fromAsset}到${trade.toAsset}的交换。`}
+                  ? `从${currentTrade.fromChain}到${currentTrade.toChain}的跨链交易需要使用专业的桥接服务。` 
+                  : `在${currentTrade.fromChain}链上进行${currentTrade.fromAsset}到${currentTrade.toAsset}的交换。`}
               </p>
               <button 
                 className="trade-option-button" 
@@ -160,7 +209,7 @@ export function TokenSwapWidget({ trade, onComplete, onClose }: TokenSwapWidgetP
               <ul>
                 <li>
                   <a 
-                    href={`https://app.across.to/?from=${trade.fromChain}&to=${trade.toChain}`} 
+                    href={`https://app.across.to/?from=${currentTrade.fromChain}&to=${currentTrade.toChain}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                   >
