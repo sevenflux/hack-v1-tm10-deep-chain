@@ -16,6 +16,8 @@ const CONTRACT_ADDRESS = AI_CONTRACT_ADDRESS;
 export function AIAdvisorContract() {
   const { address, isConnected } = useAccount()
   const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [history, setHistory] = useState<BlockchainRequest[]>([])
   const { data: userRequests, isError, refetch } = useReadContract({
     address: CONTRACT_ADDRESS as Address,
@@ -47,6 +49,22 @@ export function AIAdvisorContract() {
     }
   }, [userRequests, address, isConnected])
   
+  // 添加超时自动重试和失败恢复机制
+  useEffect(() => {
+    // 如果已加载数据，则不执行
+    if (history.length > 0) return;
+    
+    // 网络问题或其他原因导致数据未加载，设置重试定时器
+    const retryTimer = setTimeout(() => {
+      if (history.length === 0 && address && isConnected) {
+        console.log("数据加载超时，尝试使用API获取历史记录");
+        fetchHistoryFromApi();
+      }
+    }, 5000); // 5秒后检查是否加载成功
+    
+    return () => clearTimeout(retryTimer);
+  }, [history.length, address, isConnected]);
+  
   // 使用API获取历史记录
   const fetchHistoryFromApi = async () => {
     if (!address) return;
@@ -65,25 +83,71 @@ export function AIAdvisorContract() {
         loadIpfsDetails(historyData);
       } else {
         console.log("API返回的历史记录为空");
+        
+        // 如果当前历史记录为空，并且API返回为空，尝试再次刷新合约数据
+        if (history.length === 0) {
+          console.log("尝试再次从合约获取数据");
+          setTimeout(() => refetch(), 2000);
+        }
       }
     } catch (error) {
       console.error("从API获取历史记录失败:", error);
+      
+      // 如果失败并且当前历史为空，尝试使用本地存储的数据
+      if (history.length === 0) {
+        try {
+          const cachedHistory = localStorage.getItem('advisorHistory');
+          if (cachedHistory) {
+            const parsedHistory = JSON.parse(cachedHistory);
+            if (parsedHistory && parsedHistory.length > 0 && parsedHistory[0].address === address) {
+              console.log("使用缓存的历史记录");
+              setHistory(parsedHistory.data || []);
+            }
+          }
+        } catch (cacheError) {
+          console.error("读取缓存数据失败:", cacheError);
+        }
+      }
     } finally {
       setIsLoading(false);
     }
   }
+  
+  // 缓存历史记录以备网络问题时使用
+  useEffect(() => {
+    if (history.length > 0 && address) {
+      try {
+        localStorage.setItem('advisorHistory', JSON.stringify({
+          address,
+          data: history,
+          timestamp: Date.now()
+        }));
+      } catch (error) {
+        console.error("缓存历史记录失败:", error);
+      }
+    }
+  }, [history, address]);
   
   // 加载IPFS详情
   const loadIpfsDetails = async (requests: BlockchainRequest[]) => {
     if (requests.length === 0) return
     
     setIsLoading(true)
+    setLoadError(false)
     
     const updatedHistory = [...requests]
+    let loadedCount = 0
+    let errorCount = 0
     
     // 并行加载所有IPFS数据
     await Promise.all(
       requests.map(async (req, index) => {
+        if (req.details) {
+          // 已经有详情数据，不需要再次加载
+          loadedCount++
+          return
+        }
+        
         try {
           const ipfsData = await apiClient.getIpfsData(req.cid)
           if (ipfsData && ipfsData.output) {
@@ -117,14 +181,41 @@ export function AIAdvisorContract() {
                 trades
               }
             }
+            loadedCount++
+          } else {
+            errorCount++
+            console.warn(`IPFS数据CID为${req.cid}的响应为空`)
           }
         } catch (error) {
+          errorCount++
           console.error(`无法加载CID为${req.cid}的IPFS数据:`, error)
         }
       })
     )
     
+    // 更新状态并跟踪加载情况
     setHistory(updatedHistory)
+    setLoadError(errorCount > 0)
+    
+    // 如果部分加载成功，也视为成功
+    if (loadedCount > 0) {
+      console.log(`IPFS数据加载: ${loadedCount}成功, ${errorCount}失败`)
+    } else if (errorCount > 0) {
+      // 全部加载失败，尝试重试
+      if (retryCount < 3) {
+        console.log(`所有IPFS数据加载失败，重试中... (${retryCount + 1}/3)`)
+        setRetryCount(prev => prev + 1)
+        
+        // 延迟重试
+        setTimeout(() => {
+          loadIpfsDetails(requests)
+        }, 3000)
+        return
+      } else {
+        console.error('多次尝试后仍无法加载IPFS数据')
+      }
+    }
+    
     setIsLoading(false)
   }
   
@@ -247,8 +338,28 @@ export function AIAdvisorContract() {
 
   // 渲染请求历史
   const renderHistory = () => {
-    if (isError) {
-      return <div className="error-message">无法加载历史数据，请检查网络连接</div>;
+    // 显示网络错误但有备选方案
+    if (isError && history.length === 0 && retryCount === 0) {
+      return (
+        <div className="error-message">
+          <p>从区块链加载历史数据失败，正在尝试备选方案...</p>
+          <button onClick={fetchHistoryFromApi} className="retry-button">
+            立即重试
+          </button>
+        </div>
+      );
+    }
+    
+    // 完全无法加载数据
+    if (isError && history.length === 0 && retryCount >= 3) {
+      return (
+        <div className="error-message">
+          <p>无法加载历史数据，请检查网络连接</p>
+          <button onClick={refreshHistory} className="retry-button">
+            重试
+          </button>
+        </div>
+      );
     }
     
     if (history.length === 0) {
@@ -260,78 +371,98 @@ export function AIAdvisorContract() {
       );
     }
     
+    // 有些IPFS数据加载失败
+    const showIpfsError = loadError && history.some(item => !item.details);
+    
     return (
-      <div className="history-list">
-        {history.map((item, index) => (
-          <div key={index} className="history-item">
-            <div className="history-time">{formatDate(item.timestamp)}</div>
-            
-            {item.details ? (
-              <div className="history-details">
-                <div className="history-recommendation">{item.details.recommendation}</div>
-                
-                {/* 判断是投资建议还是交易执行 */}
-                {item.details.trades && item.details.trades.length > 0 ? (
-                  <div className="trades-list history-trades">
-                    <h4>交易计划</h4>
-                    {item.details.trades.map((trade, i) => (
-                      <div key={i}>{renderTradeItem(trade)}</div>
-                    ))}
-                  </div>
-                ) : item.details.allocation && (
-                  <div className="mini-allocation-chart">
-                    {item.details.allocation.map((alloc, i) => (
-                      <div key={i} className="mini-allocation-item">
-                        <div className="mini-allocation-label">
-                          {alloc.asset}
-                          {alloc.chain && <span className="chain-tag" data-chain={alloc.chain}>{alloc.chain}</span>}
-                        </div>
-                        <div className="mini-allocation-bar-container">
-                          <div 
-                            className="mini-allocation-bar" 
-                            style={{width: `${alloc.percentage}%`}}
-                          ></div>
-                          <span className="mini-allocation-percentage">{alloc.percentage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="history-loading">加载IPFS数据中...</div>
-            )}
-            
-            <div className="history-links">
-              <a 
-                href={`https://ipfs.io/ipfs/${item.cid}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="history-link"
-              >
-                查看IPFS数据
-              </a>
-              <button 
-                onClick={() => {
-                  // 复制请求哈希到剪贴板
-                  navigator.clipboard.writeText(item.requestHash);
-                  alert('请求ID已复制到剪贴板');
-                }}
-                className="history-link"
-              >
-                复制请求ID
-              </button>
-              <button 
-                onClick={() => verifyTransaction(item.requestHash)}
-                className="history-link verify-button"
-                disabled={isLoading}
-              >
-                查找交易详情
-              </button>
-            </div>
+      <>
+        {showIpfsError && (
+          <div className="warning-message">
+            <p>部分详细数据加载失败，但我们仍然显示可用的信息</p>
+            <button onClick={() => loadIpfsDetails(history)} className="retry-button">
+              重新加载详情
+            </button>
           </div>
-        ))}
-      </div>
+        )}
+        
+        <div className="history-list">
+          {history.map((item, index) => (
+            <div key={index} className="history-item">
+              <div className="history-time">{formatDate(item.timestamp)}</div>
+              
+              {item.details ? (
+                <div className="history-details">
+                  <div className="history-recommendation">{item.details.recommendation}</div>
+                  
+                  {/* 判断是投资建议还是交易执行 */}
+                  {item.details.trades && item.details.trades.length > 0 ? (
+                    <div className="trades-list history-trades">
+                      <h4>交易计划</h4>
+                      {item.details.trades.map((trade, i) => (
+                        <div key={i}>{renderTradeItem(trade)}</div>
+                      ))}
+                    </div>
+                  ) : item.details.allocation && (
+                    <div className="mini-allocation-chart">
+                      {item.details.allocation.map((alloc, i) => (
+                        <div key={i} className="mini-allocation-item">
+                          <div className="mini-allocation-label">
+                            {alloc.asset}
+                            {alloc.chain && <span className="chain-tag" data-chain={alloc.chain}>{alloc.chain}</span>}
+                          </div>
+                          <div className="mini-allocation-bar-container">
+                            <div 
+                              className="mini-allocation-bar" 
+                              style={{width: `${alloc.percentage}%`}}
+                            ></div>
+                            <span className="mini-allocation-percentage">{alloc.percentage}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="history-loading">
+                  {isLoading ? '加载IPFS数据中...' : 
+                   <button onClick={() => loadIpfsDetails([item])} className="retry-button">
+                     重新加载详情
+                   </button>
+                  }
+                </div>
+              )}
+              
+              <div className="history-links">
+                <a 
+                  href={`https://ipfs.io/ipfs/${item.cid}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="history-link"
+                >
+                  查看IPFS数据
+                </a>
+                <button 
+                  onClick={() => {
+                    // 复制请求哈希到剪贴板
+                    navigator.clipboard.writeText(item.requestHash);
+                    alert('请求ID已复制到剪贴板');
+                  }}
+                  className="history-link"
+                >
+                  复制请求ID
+                </button>
+                <button 
+                  onClick={() => verifyTransaction(item.requestHash)}
+                  className="history-link verify-button"
+                  disabled={isLoading}
+                >
+                  查找交易详情
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
   

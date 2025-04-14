@@ -11,7 +11,7 @@ import {
 } from './types';
 
 // API 基础URL - 根据环境配置
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // IPFS配置
 export const IPFS_GATEWAY = 'https://ipfs.io/ipfs';

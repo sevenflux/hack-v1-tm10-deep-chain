@@ -241,7 +241,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       const timer = setTimeout(() => {
         // 检查组件是否仍然需要更新
         if (address) {
-          console.log('更新原生代币余额计算', requestId);
+
           
           // 标记为加载中
           setIsLoadingBalances(true);
@@ -331,9 +331,95 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     totalValue
   ]);
   
+  // 处理ERC20代币余额
+  useEffect(() => {
+    if (!address || !erc20Data) return;
+    
+    setIsLoadingBalances(true);
+    
+    // 使用setTimeout避免状态更新冲突
+    setTimeout(() => {
+      // 使用函数式更新避免依赖旧状态
+      setTokenBalances(prev => {
+        const newBalances = {...prev};
+        let newTotalValue = 0;
+        
+        // 保留现有的原生代币余额价值
+        Object.values(prev).forEach(item => {
+          if (item.token.address === 'native') {
+            newTotalValue += item.value;
+            newBalances[item.token.symbol + '-' + item.token.chainKey] = item;
+          }
+        });
+        
+        // 用于检测是否有实际变化的标志
+        let hasChanges = false;
+        
+        // 处理ERC20代币余额
+        erc20Data.forEach((result, index) => {
+          const token = erc20Tokens[index];
+          if (result.status === 'success' && result.result) {
+            const rawBalance = result.result;
+            const formattedBalance = Number(rawBalance.toString()) / Math.pow(10, token.decimals);
+            
+            // 获取或估算价格
+            const price = token.price || 1; // 使用配置中的价格或默认为1
+            const value = formattedBalance * price;
+            
+            if (formattedBalance > 0) {
+              const tokenKey = token.symbol + '-' + token.chainKey;
+              const existingToken = prev[tokenKey];
+              
+              // 检查是否有实际变化
+              if (!existingToken || 
+                  Math.abs(existingToken.balance - formattedBalance) > 0.0001 || 
+                  Math.abs(existingToken.value - value) > 0.01) {
+                
+                hasChanges = true;
+                newBalances[tokenKey] = {
+                  token: {
+                    ...token,
+                    price // 确保价格被包含
+                  },
+                  balance: formattedBalance,
+                  value
+                };
+              } else {
+                // 保持现有值
+                newBalances[tokenKey] = existingToken;
+              }
+              
+              newTotalValue += value;
+            }
+          }
+        });
+        
+        // 只在有实际变化时才输出日志
+        if (hasChanges) {
+          console.log('ERC20余额更新:', Object.values(newBalances)
+            .filter(item => item.token.address !== 'native')
+            .map(item => 
+              `${item.token.symbol}(${item.token.chainKey}): ${item.balance.toFixed(4)}, 价值: $${item.value.toFixed(2)}`
+            )
+          );
+        }
+        
+        // 设置总价值
+        if (Math.abs(totalValue - newTotalValue) > 0.01) {
+          setTotalValue(newTotalValue);
+        }
+        
+        return newBalances;
+      });
+      
+      setIsLoadingBalances(false);
+    }, 10);
+  }, [address, erc20Data, erc20Tokens, totalValue]);
+  
   // 转换为API所需的CryptoAsset格式
   const calculateAssetDistribution = useCallback((): CryptoAsset[] => {
     const assets: CryptoAsset[] = [];
+
     
     // 如果没有令牌余额数据，返回默认资产数据
     if (Object.keys(tokenBalances).length === 0) {
@@ -348,6 +434,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       // 跳过零余额
       if (item.value === 0) return;
       
+      // 确定链名称 - 优先使用chainKey
+      let chain = 'ethereum'; // 默认
+      if (item.token.chainKey) {
+        chain = item.token.chainKey;
+      } else if (item.token.chainId) {
+        // 使用chainId查找链名称
+        const chainInfo = SUPPORTED_CHAINS.find(c => c.id === item.token.chainId);
+        chain = chainInfo?.key || 'ethereum';
+      }
+      
       // 计算百分比
       const percentage = (item.value / totalValue) * 100;
       
@@ -357,9 +453,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       assets.push({
         symbol: item.token.symbol,
         percentage: Number(percentage.toFixed(1)),
-        chain: item.token.chainId ? SUPPORTED_CHAINS.find(c => c.id === item.token.chainId)?.key || 'ethereum' : 'ethereum',
-        amount: item.balance,
-        price: item.value / item.balance // 计算单价
+        chain: chain, // 使用上面确定的chain变量
+        amount: Number(item.balance) || 0,
+        price: item.token.price || (item.value / (Number(item.balance) || 1)) // 优先使用token.price
       });
     });
     
@@ -379,8 +475,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         asset.percentage > max.percentage ? asset : max, assets[0]);
       
       // 调整百分比使总和为100%
-      maxAsset.percentage += (100 - totalPercentage);
+      maxAsset.percentage = Number((maxAsset.percentage + (100 - totalPercentage)).toFixed(1));
     }
+    
+
     
     return assets;
   }, [tokenBalances, totalValue]);
@@ -427,7 +525,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         requestInput.riskLevel === 'medium' ? '中' : '高'
       }，总资产价值-${requestInput.amount}美元，当前加密货币资产分布：${
         requestInput.cryptoAssets.map(asset => 
-          `${asset.symbol}: ${asset.percentage}% (${asset.chain}${asset.amount ? `, 数量: ${asset.amount.toFixed(4)}` : ''})`
+          `${asset.symbol}: ${asset.percentage}% (${asset.chain}${asset.amount ? `, 数量: ${asset.amount.toFixed(4)}` : ''}${asset.price ? `, 价格: $${asset.price.toFixed(2)}` : ''})`
         ).join(', ')
       }`,
       timestamp: Date.now()
@@ -451,12 +549,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // 处理交易执行响应
         const trades = response.data.trades;
         
-        setChatHistory(prev => [...prev, {
-          type: 'ai',
+          setChatHistory(prev => [...prev, {
+            type: 'ai',
           text: response.data?.tradeSummary || response.data?.recommendation || '无法获取交易建议',
           timestamp: Date.now(),
           trades: trades,
-          txHash: response.data?.txHash,
+            txHash: response.data?.txHash,
           cid: response.data?.cid
         }]);
         
@@ -813,7 +911,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {showOverlay && <div className="swap-overlay" onClick={handleCloseSwapWidget}></div>}
       {showSwapWidget && (
         <TokenSwapWidget 
-          trade={selectedTrade} 
+          trade={selectedTrade || undefined} 
           trades={selectedTrade ? undefined : chatHistory.find(msg => msg.trades)?.trades}
           userAddress={address || ''}
           onComplete={handleTradeComplete} 
